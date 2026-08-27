@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SCAN % — v0.5 Fullscreen</title>
+<style>
+:root{background:#050607;color:#eee;font-family:Inter,Arial,sans-serif;--bg:#050607;--panel:#0b0f12;--panel2:#10161a;--line:#20292f;--muted:#7f8a90;--green:#35ff68;--yellow:#ffc52b;--red:#ff5b61}
+*{box-sizing:border-box}html,body{margin:0;background:linear-gradient(180deg,#080a0c,#030405);min-height:100%;color:#eee}body{min-height:100vh}
+button,input{font:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}
+.shell{min-height:100vh;display:flex}.sideNav{position:fixed;left:0;top:0;bottom:0;width:58px;background:#07090b;border-right:1px solid #151b1f;display:flex;flex-direction:column;align-items:center;padding:12px 7px;z-index:20}.brandMark{width:42px;height:42px;border:1px solid #263036;border-radius:13px;display:grid;place-items:center;color:var(--green);font-weight:950;font-size:15px;margin-bottom:18px;text-shadow:0 0 12px #35ff6850}.nav{display:flex;flex-direction:column;gap:8px;width:100%}.nav button{width:44px;height:44px;padding:0;border:1px solid transparent;background:transparent;color:#68747b;border-radius:13px;font-size:19px;display:grid;place-items:center}.nav button.active{background:#11191d;border-color:#263138;color:var(--green);box-shadow:inset 2px 0 0 var(--green),0 0 18px #000}.nav button:active{transform:scale(.96)}.navBottom{margin-top:auto}.main{width:100%;padding:0 18px 32px 76px}.topbar{height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:980px;margin:auto}.title{font-size:23px;font-weight:950;letter-spacing:-.5px}.subtitle{font-size:11px;color:#68747b;margin-top:2px}.topRight{display:flex;align-items:center;gap:10px}.source{font-size:12px;color:#aeb7bc}.live{color:var(--green);font-weight:900}.wait{color:var(--yellow);font-weight:900}.bad{color:var(--red);font-weight:900}.statusDot{font-variant-numeric:tabular-nums}
+.page{max-width:980px;margin:auto}.pageHead{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:10px 0 14px}.pageHead h1{font-size:27px;margin:0}.pageHead p{margin:4px 0 0;color:var(--muted);font-size:13px}.panel{background:linear-gradient(180deg,#0c1114,#090d10);border:1px solid #1b2429;border-radius:19px;padding:16px;margin-bottom:14px;box-shadow:0 12px 38px #0009}.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.field{flex:1;min-width:145px}.field label{display:block;color:#8d979d;font-size:12px;margin-bottom:7px}input{width:100%;background:#11171b;color:#fff;border:1px solid #273239;border-radius:12px;padding:12px;font-size:15px;outline:none}input:focus{border-color:#3b4a52;box-shadow:0 0 0 2px #35ff6812}button.primary{background:#17201f;color:#fff;border:1px solid #34413f;border-radius:12px;padding:12px 16px;font-weight:800}button.primary:hover{border-color:#35ff68}button.ghost{background:#11171b;color:#d9dfe2;border:1px solid #2a343a;border-radius:12px;padding:11px 14px;font-weight:750}.danger{color:#ff6a70!important;border-color:#512a2d!important;background:#160e10!important}.status{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9ba4a9;margin-bottom:12px}.small{font-size:11px;color:#69747a}.note{font-size:12px;color:#778188;line-height:1.5}.ok{color:var(--green)}.warn{color:var(--yellow)}.err{color:var(--red)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pairCard{background:#0d1317;border:1px solid #202a30;border-radius:16px;padding:15px;position:relative;transition:.15s}.pairCard.active{border-color:#31523a;box-shadow:0 0 22px #35ff6810}.pairCard:hover{border-color:#344149}.pairTop{display:flex;justify-content:space-between;gap:8px;align-items:start}.pairName{font-weight:900;font-size:17px}.pairMeta{font-size:11px;color:#78838a;margin-top:4px}.pairSpread{font-size:28px;font-weight:950;color:var(--green);text-shadow:0 0 16px #35ff6830;margin:15px 0 8px}.pairActions{display:flex;gap:8px}.pairActions button{flex:1}.empty{text-align:center;padding:30px 15px;color:#7c878d}.search{margin-bottom:12px}.search input{background:#0f1519}.badge{display:inline-flex;padding:5px 8px;border-radius:8px;background:#111a1d;border:1px solid #273238;color:#aeb7bc;font-size:10px}.badge.active{color:var(--green);border-color:#294832}
+.asset{padding:4px 0 12px}.assetHead{display:flex;justify-content:space-between;align-items:center;gap:8px}.name{font-size:18px;font-weight:850}.ticker{font-size:12px;color:#7e898f;margin-top:3px}.side{font-size:11px;padding:6px 9px;border-radius:9px;border:1px solid #30383d;color:#bbb}.price{font-size:39px;font-weight:950;letter-spacing:-1px;color:var(--green);margin:10px 0 2px;text-shadow:0 0 18px #35ff6840}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.metric{background:#11161a;border-radius:11px;padding:10px}.metric span{display:block;color:#778188;font-size:11px}.metric b{font-size:17px}.pct{font-size:22px;font-weight:900}.positive{color:var(--green)}.negative{color:#ff6464}.neutral{color:#ddd}.divider{height:1px;background:#20282d;margin:13px 0}.result{text-align:center;padding:18px 8px}.result small{color:#7d878d}.result .big{font-size:52px;font-weight:950;margin:7px 0;color:var(--green);text-shadow:0 0 24px #35ff6838}.archiveGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.archiveCard{background:#11161a;border-radius:14px;padding:14px;border:1px solid #1e272d}.archiveTitle{font-size:15px;font-weight:800}.archiveTicker{font-size:11px;color:#7e898f;margin-top:3px}.archivePrice{font-size:30px;font-weight:900;margin-top:10px;color:#f1f1f1}.archiveLabel{font-size:11px;color:#7e898f;margin-top:7px}.archiveTime{font-size:12px;color:#c5cbd0;margin-top:3px}
+.sectionTitle{font-size:14px;font-weight:850;margin-bottom:12px;color:#cdd3d6}.check{display:flex;align-items:center;gap:8px;background:#11171b;border:1px solid #242f35;padding:10px 12px;border-radius:11px}.check input{width:auto}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.formActions{display:flex;gap:9px;margin-top:14px}.formActions button{flex:1}.dangerZone{border-color:#392126}.modalBack{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:20px;z-index:50}.modal{max-width:390px;width:100%;background:#0c1114;border:1px solid #303a40;border-radius:18px;padding:20px;box-shadow:0 30px 80px #000}.modal h3{margin:0 0 8px;font-size:20px}.modal p{color:#929da3;font-size:13px;line-height:1.5}.modalActions{display:flex;gap:8px;margin-top:16px}.modalActions button{flex:1}.hidden{display:none!important}
+/* v0.5 — responsive Telegram Mini App / Fullscreen layout */
+.main{padding-left:76px;padding-right:24px;width:100%;}
+.topbar,.page{width:100%;max-width:none;}
+.topbar{height:72px;}
+.page{margin:0;}
+.pageHead{margin-top:8px;}
+.panel{padding:20px;border-radius:20px;}
+.cards{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;}
+.formGrid,.archiveGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+
+/* Wide Fullscreen: use the whole Telegram viewport instead of a centered medium column. */
+@media(min-width:700px){
+  .main{padding-left:82px;padding-right:28px;}
+  .topbar{padding:0 4px;}
+  .title{font-size:26px;}
+  .subtitle{font-size:12px;}
+  .pageHead h1{font-size:32px;}
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  .pairCard{padding:20px;min-height:190px;}
+  .pairName{font-size:19px;}
+  .pairSpread{font-size:34px;margin:20px 0 10px;}
+  /* Pair terminal becomes a dashboard on wide screens. */
+  #page-pair > .panel:nth-of-type(1){display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;}
+  #page-pair > .panel:nth-of-type(1) .status{grid-column:1/-1;}
+  #page-pair > .panel:nth-of-type(1) .row{grid-column:1/-1;}
+  #page-pair > .panel:nth-of-type(2) .archiveGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;}
+  #page-pair > .panel:nth-of-type(3){padding:24px;}
+  .result .big{font-size:68px;}
+  #page-pair > .panel:nth-of-type(4) .note{max-width:900px;}
+}
+
+/* Medium Telegram Fullsize */
+@media(min-width:501px) and (max-width:699px){
+  .main{padding-left:70px;padding-right:16px;}
+  .cards{grid-template-columns:1fr 1fr;}
+  .pairCard{padding:16px;}
+  .pageHead h1{font-size:29px;}
+}
+
+/* Compact mode */
+@media(max-width:500px){
+  .sideNav{width:58px;}
+  .main{padding-left:68px;padding-right:10px;}
+  .topbar{height:60px;}
+  .title{font-size:21px;}
+  .cards,.formGrid,.archiveGrid{grid-template-columns:1fr;}
+  .pageHead{align-items:start;flex-direction:column;}
+  .pairSpread{font-size:26px;}
+  .price{font-size:36px;}
+  .result .big{font-size:45px;}
+  .source{display:none;}
+  .panel{padding:15px;}
+}
+
+/* Very wide screens: keep the Ferrari-style dashboard dense rather than stretching cards excessively. */
+@media(min-width:1200px){
+  .main{padding-left:92px;padding-right:40px;}
+  .cards{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .page{max-width:1500px;margin:0 auto;}
+  .topbar{max-width:1500px;}
+}
+
+
+.catalogFilters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:2px 0 12px}.filterLabel{font-size:11px;color:#6f7a80;margin-right:2px}.quoteFilter,.typeFilter{background:#0b1013;color:#8d999f;border:1px solid #222d33;border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800}.quoteFilter.active,.typeFilter.active{color:#35ff68;border-color:#31523a;background:#101a16}.instrumentTabs{display:flex;gap:8px;overflow-x:auto;padding:3px 0 10px;scrollbar-width:none}.instrumentTabs::-webkit-scrollbar{display:none}.instrumentTab{white-space:nowrap;padding:10px 14px;border:1px solid #273239;background:#0c1114;color:#89949a;border-radius:12px;font-weight:850;font-size:12px}.instrumentTab.active{color:#35ff68;border-color:#31523a;background:#101a16;box-shadow:0 0 18px #35ff6810}.instrumentSearch{margin:0 0 12px}.instrumentList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:52vh;overflow:auto;padding-right:2px}.instrumentItem{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:8px;padding:9px 10px;border:1px solid #1d272d;background:#0b1013;border-radius:11px;min-width:0}.instrumentName{font-size:13px}.instrumentId{font-size:10px}.instrumentPrice{font-size:13px;font-weight:850;min-width:72px;text-align:right}.pickBtn{width:30px;height:30px;padding:0;border-radius:9px;border:1px solid #273239;background:#10161a;color:#8e999f;font-weight:900}.pickBtn.selected{color:#35ff68;border-color:#31523a;background:#101a16;box-shadow:0 0 12px #35ff6810}.instrumentItem:hover{border-color:#34434a;background:#0e1519}.instrumentMain{min-width:0}.instrumentName{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.instrumentId{font:11px ui-monospace,monospace;color:#657178;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.instrumentPrice{font-weight:900;color:#35ff68;font-variant-numeric:tabular-nums;white-space:nowrap}.pickBtn{border:1px solid #2a373d;background:#11181c;color:#dce2e5;border-radius:10px;padding:8px 10px;font-weight:800}.pickBtn.selected{color:#35ff68;border-color:#31523a}.catalogState{margin:8px 0 12px;font-size:12px;color:#7d898f}.sidePicker{display:grid;grid-template-columns:1fr 1fr;gap:12px}.picked{background:#0d1317;border:1px solid #202a30;border-radius:14px;padding:12px}.picked b{display:block;font-size:13px}.picked span{display:block;font:11px ui-monospace,monospace;color:#69757b;margin-top:4px}.picked strong{display:block;margin-top:7px;color:#35ff68;font-size:20px}@media(max-width:600px){.instrumentList{grid-template-columns:1fr}.sidePicker{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sideNav">
+    <div class="brandMark">%</div>
+    <nav class="nav">
+      <button data-page="overview" class="active" title="Обзор">⌂</button>
+      <button data-page="new" title="Новая пара">＋</button>
+      <button data-page="pairs" title="Мои пары">≋</button>
+      <button data-page="history" title="История">◷</button>
+      <button data-page="alerts" title="Оповещения">♢</button>
+    </nav>
+    <div class="nav navBottom"><button data-page="settings" title="Настройки">⚙</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div class="title">SCAN %</div><div class="subtitle">PAIR DIVERGENCE TERMINAL · v0.5</div></div>
+      <div class="topRight"><span class="source">OKX</span><span id="globalStatus" class="wait">● ОЖИДАНИЕ</span></div>
+    </header>
+
+    <section id="page-overview" class="page">
+      <div class="pageHead"><div><h1>Обзор</h1><p>Быстрый мониторинг сохранённых пар.</p></div><button class="primary" id="goNew">＋ Новая пара</button></div>
+      <div id="overviewCards" class="cards"></div>
+      <div id="overviewEmpty" class="panel empty">Пока нет сохранённых пар. Создай первую пару — расчёт будет работать на том же ядре, что и v0.3.</div>
+    </section>
+
+    <section id="page-pairs" class="page hidden">
+      <div class="pageHead"><div><h1>Мои пары</h1><p>Сохранённые пары. Нажатие «Открыть» делает пару активной.</p></div><button class="primary" id="goNew2">＋ Новая пара</button></div>
+      <div class="panel search"><input id="pairSearch" placeholder="Поиск по названию или тикеру…"></div>
+      <div id="pairList" class="cards"></div>
+    </section>
+
+    <section id="page-new" class="page hidden">
+      <div class="pageHead"><div><h1>Новая пара</h1><p>Пока делаем только слой сохранения. Расчёт остаётся прежним.</p></div></div>
+      <div class="panel">
+        <div class="sectionTitle">Название пары</div>
+        <input id="newName" placeholder="Например: Серебро / Нефть">
+        <input id="newInst1" type="hidden"><input id="newInst2" type="hidden"><input id="newLabel1" type="hidden"><input id="newLabel2" type="hidden">
+        <div class="sidePicker" style="margin-top:12px">
+          <div class="picked"><b id="picked1">Инструмент 1 не выбран</b><span id="pickedId1">—</span><strong id="pickedPrice1">—</strong></div>
+          <div class="picked"><b id="picked2">Инструмент 2 не выбран</b><span id="pickedId2">—</span><strong id="pickedPrice2">—</strong></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="instrumentTabs" id="instrumentTabs">
+          <button class="instrumentTab active" data-kind="SPOT">SPOT</button>
+          <button class="instrumentTab" data-kind="FUTURES">FUTURES</button>
+          <button class="instrumentTab" data-kind="COMMODITY">ТОВАРЫ</button>
+        </div>
+        <div class="catalogState" id="catalogState">Загрузка каталога OKX…</div>
+        <div class="search instrumentSearch"><input id="instrumentSearch" placeholder="Поиск тикера или названия…" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+        <div class="catalogFilters" id="catalogFilters">
+          <span class="filterLabel">КОТИРОВКА</span>
+          <button class="quoteFilter active" data-quote="ALL">Все</button>
+          <button class="quoteFilter" data-quote="USDT">USDT</button>
+          <button class="quoteFilter" data-quote="USDC">USDC</button>
+          <button class="quoteFilter" data-quote="USD">USD</button>
+          <button class="quoteFilter" data-quote="OTHER">Другие</button>
+          <span class="filterLabel" style="margin-left:6px">ТИП</span>
+          <button class="typeFilter active" data-type="CURRENT">Текущая группа</button>
+          <button class="typeFilter" data-type="OPTION">Опционы</button>
+        </div>
+        <div id="instrumentList" class="instrumentList"></div>
+      </div>
+      <div class="panel">
+        <div class="formActions"><button class="ghost" id="cancelNew">Очистить выбор</button><button class="primary" id="saveNew">Сохранить пару</button></div>
+      </div>
+      <div class="panel"><div class="sectionTitle">Подсказка</div><div class="note">Тикеры должны быть именно такими, как их принимает OKX API, например <span class="mono">XAG-USDT-SWAP</span>. На следующем этапе добавим удобный поиск инструментов, чтобы не вводить их руками.</div></div>
+    </section>
+
+    <section id="page-history" class="page hidden">
+      <div class="pageHead"><div><h1>История</h1><p>Точки 0, которые сохранены локально.</p></div></div>
+      <div id="historyList"></div>
+    </section>
+
+    <section id="page-alerts" class="page hidden">
+      <div class="pageHead"><div><h1>Оповещения</h1><p>Сами пороги добавим отдельным слоем после проверки сохранения пар.</p></div></div>
+      <div class="panel"><div class="note">Здесь пока ничего не меняем. В v0.5/v0.6 добавим два твоих ползунка для предупреждения и сильного расхождения.</div></div>
+    </section>
+
+    <section id="page-settings" class="page hidden">
+      <div class="pageHead"><div><h1>Настройки</h1><p>Техническое состояние соединения.</p></div></div>
+      <div class="panel">
+        <div class="status"><span>Источник</span><b>OKX</b></div>
+        <div class="status"><span>Исторические данные</span><span id="histState" class="small">history-candles · 1m</span></div>
+        <div class="status"><span>WebSocket</span><span id="wsState" class="small">—</span></div>
+        <div class="status"><span>Активная пара</span><span id="activeState" class="small">—</span></div>
+      </div>
+    </section>
+
+    <section id="page-pair" class="page hidden">
+      <div class="pageHead"><div><h1 id="pairTitle">Пара</h1><p id="pairSubtitle">Архивная точка 0 + поток OKX</p></div><button class="ghost danger" id="deletePairTop">✕ Удалить пару</button></div>
+
+      <div class="panel">
+        <div class="status"><span>Источник: <b>OKX</b></span><span id="status" class="wait">● ОЖИДАНИЕ</span></div>
+        <div class="row">
+          <div class="field"><label>Дата точки 0</label><input id="date" type="date"></div>
+          <div class="field"><label>Время точки 0</label><input id="time" type="time" step="60"></div>
+          <button id="start" class="primary">Загрузить архивную точку 0</button>
+        </div>
+        <div id="archiveStatus" class="note" style="margin-top:10px">Выберите дату и минуту. Цены точки 0 берутся из исторических 1m свечей OKX.</div>
+      </div>
+
+      <div class="panel">
+        <div class="status"><span><b>АРХИВ OKX — ТОЧКА 0</b></span><span id="archiveState" class="small">не загружено</span></div>
+        <div class="archiveGrid">
+          <div class="archiveCard"><div id="archiveTitle1" class="archiveTitle">Инструмент 1</div><div id="archiveTicker1" class="archiveTicker">—</div><div id="archive1" class="archivePrice">—</div><div class="archiveLabel">Цена закрытия 1m свечи</div><div id="archiveTime1" class="archiveTime">—</div></div>
+          <div class="archiveCard"><div id="archiveTitle2" class="archiveTitle">Инструмент 2</div><div id="archiveTicker2" class="archiveTicker">—</div><div id="archive2" class="archivePrice">—</div><div class="archiveLabel">Цена закрытия 1m свечи</div><div id="archiveTime2" class="archiveTime">—</div></div>
+        </div>
+        <div class="note" style="margin-top:12px">Контрольные цены не берутся из live-потока. Их можно вручную сверить с OKX/графиком.</div>
+      </div>
+
+      <div class="panel">
+        <div class="asset"><div class="assetHead"><div><div id="name1" class="name">Инструмент 1</div><div id="ticker1" class="ticker">—</div></div><div id="side1" class="side">Направление выберем позже</div></div><div id="price1" class="price">—</div><div class="meta"><div class="metric"><span>Архивная стартовая цена</span><b id="base1">—</b></div><div class="metric"><span>Изменение от точки 0</span><b id="pct1" class="neutral">—</b></div></div></div>
+        <div class="divider"></div>
+        <div class="asset"><div class="assetHead"><div><div id="name2" class="name">Инструмент 2</div><div id="ticker2" class="ticker">—</div></div><div id="side2" class="side">Направление выберем позже</div></div><div id="price2" class="price">—</div><div class="meta"><div class="metric"><span>Архивная стартовая цена</span><b id="base2">—</b></div><div class="metric"><span>Изменение от точки 0</span><b id="pct2" class="neutral">—</b></div></div></div>
+      </div>
+
+      <div class="panel result"><small>РАСХОЖДЕНИЕ</small><div id="dist" class="big">—</div><div id="formula" class="note mono">Сначала загрузите архивную точку 0</div></div>
+
+      <div class="panel"><div class="status"><span>Последний тик <b id="tickName1">1</b>: <b id="tick1">—</b></span><span><b id="tickName2">2</b>: <b id="tick2">—</b></span></div><div class="note">Live-цены идут через WebSocket OKX. Архивная точка берётся через <b>history-candles, 1m</b>. Точка 0 и список пар сохраняются в памяти браузера.</div></div>
+    </section>
+  </main>
+</div>
+
+<div id="modalBack" class="modalBack">
+  <div class="modal">
+    <h3>Удалить пару?</h3>
+    <p id="modalText">Действительно удалить эту пару? Сохранённая точка 0 для неё тоже будет удалена.</p>
+    <div class="modalActions"><button id="modalCancel" class="ghost">Отмена</button><button id="modalConfirm" class="ghost danger">Удалить</button></div>
+  </div>
+</div>
+
+<script>
+const STORE="scan_percent_v05";
+const OLD_STORE="scan_percent_v03";
+const defaultPair={id:"pair_xag_cl",name:"Серебро / Нефть",inst1:"XAG-USDT-SWAP",inst2:"CL-USDT-SWAP",label1:"Серебро",label2:"Нефть WTI",side1:"",side2:"",baseline:null,archive:{one:null,two:null}};
+const state={pairs:[],activeId:null,live:{},ws:null,reconnectTimer:null,reconnectSeq:0,wsSeq:0,pendingDelete:null,lastTick:{}};
+const catalog={SPOT:[],FUTURES:[],COMMODITY:[],OPTION:[],loaded:false,kind:'SPOT',search:'',quote:'ALL',type:'CURRENT',pick1:null,pick2:null,prices:{}};
+const commodityNames={XAG:'Серебро',XAU:'Золото',XCU:'Медь',CL:'Нефть WTI',BZ:'Brent',NG:'Природный газ',ZW:'Пшеница'};
+
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:8});
+const pctFmt=n=>(n>=0?"+":"")+n.toFixed(2)+"%";
+function clone(x){return JSON.parse(JSON.stringify(x))}
+function setGlobal(t,c){$("globalStatus").textContent="● "+t;$("globalStatus").className=c}
+function activePair(){return state.pairs.find(p=>p.id===state.activeId)||null}
+function currentPage(id){document.querySelectorAll(".page").forEach(x=>x.classList.add("hidden"));$("page-"+id).classList.remove("hidden");document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));}
+function save(){localStorage.setItem(STORE,JSON.stringify({pairs:state.pairs,activeId:state.activeId}))}
+function load(){
+  try{
+    const v=JSON.parse(localStorage.getItem(STORE)||"null");
+    if(v&&Array.isArray(v.pairs)){state.pairs=v.pairs;state.activeId=v.activeId||null;return}
+    const old=JSON.parse(localStorage.getItem(OLD_STORE)||"null");
+    if(old&&old.base&&old.baseline){
+      const p=clone(defaultPair);p.baseline=old.baseline;p.archive={one:old.archive?.xag||{ts:Date.parse(old.baseline),close:old.base.xag},two:old.archive?.cl||{ts:Date.parse(old.baseline),close:old.base.cl}};state.pairs=[p];state.activeId=p.id;save();
+    }
+  }catch(e){console.warn("load",e)}
+  if(!state.pairs.length){const p=clone(defaultPair);state.pairs=[p];state.activeId=p.id;save()}
+}
+function getPairLabel(p){return p.name+" · "+p.inst1+" / "+p.inst2}
+function renderLists(){
+  const q=($('pairSearch')?.value||'').trim().toLowerCase();
+  const filtered=state.pairs.filter(p=>(p.name+" "+p.inst1+" "+p.inst2+" "+p.label1+" "+p.label2).toLowerCase().includes(q));
+  $("overviewCards").innerHTML=state.pairs.map(pairCard).join("");$("overviewEmpty").classList.toggle("hidden",state.pairs.length>0);
+  $("pairList").innerHTML=filtered.length?filtered.map(pairCard).join(""):'<div class="panel empty">Ничего не найдено.</div>';
+  document.querySelectorAll("[data-open-pair]").forEach(b=>b.onclick=()=>openPair(b.dataset.openPair));
+  document.querySelectorAll("[data-delete-pair]").forEach(b=>b.onclick=()=>askDelete(b.dataset.deletePair));
+}
+function pairCard(p){
+  const active=p.id===state.activeId;const live1=state.live[p.inst1],live2=state.live[p.inst2];let spread="—";
+  if(p.archive?.one?.close&&p.archive?.two?.close&&live1!=null&&live2!=null){const a=(live1-p.archive.one.close)/p.archive.one.close*100,b=(live2-p.archive.two.close)/p.archive.two.close*100;spread=pctFmt(a-b)}
+  return `<div class="pairCard ${active?'active':''}"><div class="pairTop"><div><div class="pairName">${esc(p.name)}</div><div class="pairMeta">${esc(p.label1)} · ${esc(p.label2)}</div></div><span class="badge ${active?'active':''}">${active?'АКТИВНА':'СОХРАНЕНА'}</span></div><div class="pairSpread">${spread}</div><div class="pairMeta">${esc(p.inst1)} / ${esc(p.inst2)}</div><div class="pairActions" style="margin-top:12px"><button class="primary" data-open-pair="${p.id}">Открыть</button><button class="ghost danger" data-delete-pair="${p.id}">✕</button></div></div>`
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+async function loadCatalog(){
+  const types=['SPOT','FUTURES','SWAP','OPTION'];
+  try{
+    setGlobal('КАТАЛОГ OKX','wait');$('catalogState').textContent='Получаю инструменты и текущие цены OKX…';
+    const results=await Promise.all(types.map(async type=>{
+      const [ir,tr]=await Promise.all([fetch('https://www.okx.com/api/v5/public/instruments?instType='+type,{cache:'no-store'}),fetch('https://www.okx.com/api/v5/market/tickers?instType='+type,{cache:'no-store'})]);
+      if(!ir.ok||!tr.ok)throw new Error(type+' HTTP '+(ir.status||tr.status));
+      const ij=await ir.json(),tj=await tr.json();
+      if(ij.code!=='0'||tj.code!=='0')throw new Error(type+' OKX '+(ij.msg||tj.msg||'error'));
+      const prices={};(tj.data||[]).forEach(x=>prices[x.instId]=Number(x.last));
+      return {type,items:(ij.data||[]).filter(x=>x.state==='live').map(x=>({...x,last:prices[x.instId]}))};
+    }));
+    const byType=Object.fromEntries(results.map(x=>[x.type,x.items]));
+    catalog.SPOT=byType.SPOT||[];catalog.FUTURES=byType.FUTURES||[];catalog.OPTION=byType.OPTION||[];
+    const swap=byType.SWAP||[];
+    catalog.COMMODITY=swap.filter(x=>{const base=String(x.instId).split('-')[0].toUpperCase();return commodityNames[base]||/^XAG|^XAU|^XCU|^CL|^BZ|^NG|^ZW/.test(base)});
+    catalog.prices={};results.forEach(r=>r.items.forEach(x=>catalog.prices[x.instId]=x.last));
+    catalog.loaded=true;$('catalogState').textContent=`OKX · SPOT ${catalog.SPOT.length} · FUTURES ${catalog.FUTURES.length} · ТОВАРЫ ${catalog.COMMODITY.length} · OPTION ${catalog.OPTION.length}`;setGlobal('LIVE','live');renderCatalog();
+  }catch(e){console.error(e);$('catalogState').textContent='Ошибка каталога: '+e.message;$('catalogState').className='err';setGlobal('КАТАЛОГ: ОШИБКА','bad')}
+}
+function instrumentLabel(x){const base=String(x.instId).split('-')[0].toUpperCase();if(catalog.kind==='COMMODITY'&&commodityNames[base])return commodityNames[base];return x.alias||x.instId}
+function quoteOf(x){return String(x.quoteCcy||x.settleCcy||x.ctValCcy||x.instId.split('-').slice(-1)[0]||'').toUpperCase()}
+function renderCatalog(){
+  const box=$('instrumentList');if(!box)return;
+  const sourceKind=catalog.type==='OPTION'?'OPTION':catalog.kind;
+  let arr=catalog[sourceKind]||[];
+  const q=catalog.search.trim().toUpperCase();
+  if(q)arr=arr.filter(x=>(x.instId+' '+instrumentLabel(x)+' '+(x.ctVal||'')).toUpperCase().includes(q));
+  if(catalog.quote!=='ALL')arr=arr.filter(x=>catalog.quote==='OTHER'?!['USDT','USDC','USD'].includes(quoteOf(x)):quoteOf(x)===catalog.quote);
+  if(!arr.length){box.innerHTML='<div class="panel empty">По этому фильтру инструменты не найдены.</div>';return}
+  box.innerHTML=arr.slice(0,500).map(x=>{
+    const sel1=catalog.pick1?.instId===x.instId,sel2=catalog.pick2?.instId===x.instId;
+    const price=Number.isFinite(x.last)?fmt(x.last):'—';
+    return `<div class="instrumentItem"><div class="instrumentMain"><div class="instrumentName">${esc(instrumentLabel(x))}</div><div class="instrumentId">${esc(x.instId)} · ${esc(quoteOf(x))}</div></div><div class="instrumentPrice">${price}</div><button class="pickBtn ${sel1?'selected':''}" data-pick="1" data-id="${esc(x.instId)}">${sel1?'✓ 1':'1'}</button><button class="pickBtn ${sel2?'selected':''}" data-pick="2" data-id="${esc(x.instId)}">${sel2?'✓ 2':'2'}</button></div>`}).join('');
+  box.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pickInstrument(b.dataset.id,Number(b.dataset.pick)));
+}
+function findInstrument(id){for(const k of ['SPOT','FUTURES','COMMODITY','OPTION']){const x=(catalog[k]||[]).find(a=>a.instId===id);if(x)return x}return null}
+function pickInstrument(id,n){const x=findInstrument(id);if(!x)return;if(n===1)catalog.pick1=x;else catalog.pick2=x;const p=n===1?1:2;$('picked'+p).textContent=instrumentLabel(x);$('pickedId'+p).textContent=x.instId;$('pickedPrice'+p).textContent=Number.isFinite(x.last)?fmt(x.last):'—';if(n===1){$('newInst1').value=x.instId;$('newLabel1').value=instrumentLabel(x)}else{$('newInst2').value=x.instId;$('newLabel2').value=instrumentLabel(x)}renderCatalog()}
+function resetPicker(){catalog.pick1=null;catalog.pick2=null;$('picked1').textContent='Инструмент 1 не выбран';$('picked2').textContent='Инструмент 2 не выбран';$('pickedId1').textContent='—';$('pickedId2').textContent='—';$('pickedPrice1').textContent='—';$('pickedPrice2').textContent='—';$('newInst1').value='';$('newInst2').value='';$('newLabel1').value='';$('newLabel2').value=''}
+function showNew(){currentPage('new');if(!catalog.loaded)loadCatalog();$("newName").focus()}
+function saveNew(){
+  const name=$("newName").value.trim()||"Новая пара";const inst1=$("newInst1").value.trim().toUpperCase();const inst2=$("newInst2").value.trim().toUpperCase();const label1=$("newLabel1").value.trim()||inst1;const label2=$("newLabel2").value.trim()||inst2;
+  if(!inst1||!inst2){alert("Укажите оба тикера OKX.");return}
+  if(state.pairs.some(p=>p.inst1===inst1&&p.inst2===inst2)){alert("Такая пара уже сохранена.");return}
+  const p={id:"pair_"+Date.now(),name,inst1,inst2,label1,label2,side1:"",side2:"",baseline:null,archive:{one:null,two:null}};state.pairs.push(p);state.activeId=p.id;save();renderLists();openPair(p.id)
+}
+function openPair(id){state.activeId=id;save();renderLists();currentPage('pair');renderPair();connect()}
+function renderPair(){
+  const p=activePair();if(!p)return;
+  $("pairTitle").textContent=p.name;$("pairSubtitle").textContent=p.inst1+" / "+p.inst2+" · архивная точка 0 + поток OKX";
+  $("name1").textContent=p.label1;$("name2").textContent=p.label2;$("ticker1").textContent=p.inst1;$("ticker2").textContent=p.inst2;$("archiveTitle1").textContent=p.label1;$("archiveTitle2").textContent=p.label2;$("archiveTicker1").textContent=p.inst1;$("archiveTicker2").textContent=p.inst2;$("tickName1").textContent=p.label1;$("tickName2").textContent=p.label2;
+  if(p.baseline){const [d,t]=p.baseline.split('T');$("date").value=d;$("time").value=t} else {const now=new Date();const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);$("date").value=local.toISOString().slice(0,10);$("time").value=local.toISOString().slice(11,16)}
+  $("archive1").textContent=p.archive?.one?fmt(p.archive.one.close):'—';$("archive2").textContent=p.archive?.two?fmt(p.archive.two.close):'—';$("archiveTime1").textContent=p.archive?.one?'OKX: '+formatLocal(p.archive.one.ts):'—';$("archiveTime2").textContent=p.archive?.two?'OKX: '+formatLocal(p.archive.two.ts):'—';
+  if(p.archive?.one){$("base1").textContent=fmt(p.archive.one.close);$("archiveState").textContent='OK';$("archiveState").className='ok'}else{$("base1").textContent='—'}
+  if(p.archive?.two)$("base2").textContent=fmt(p.archive.two.close);else $("base2").textContent='—';
+  $("archiveStatus").innerHTML=p.baseline&&p.archive?.one&&p.archive?.two?'Точка 0 загружена из <b>архива OKX</b>. Обе цены отделены от текущего потока.':'Выберите дату и минуту. Цены точки 0 берутся из исторических 1m свечей OKX.';
+  renderLivePair();
+}
+function formatLocal(ts){return new Date(ts).toLocaleString('ru-RU',{hour12:false})}
+function paintPct(el,v){el.textContent=pctFmt(v);el.className=v>0?'positive':v<0?'negative':'neutral'}
+function renderLivePair(){const p=activePair();if(!p)return;const a=state.live[p.inst1],b=state.live[p.inst2];if(a!=null){$("price1").textContent=fmt(a);$("tick1").textContent=new Date().toLocaleTimeString('ru-RU')}if(b!=null){$("price2").textContent=fmt(b);$("tick2").textContent=new Date().toLocaleTimeString('ru-RU')}
+  if(p.archive?.one?.close&&a!=null){$("base1").textContent=fmt(p.archive.one.close);paintPct($("pct1"),(a-p.archive.one.close)/p.archive.one.close*100)}else $("pct1").textContent='—';
+  if(p.archive?.two?.close&&b!=null){$("base2").textContent=fmt(p.archive.two.close);paintPct($("pct2"),(b-p.archive.two.close)/p.archive.two.close*100)}else $("pct2").textContent='—';
+  if(p.archive?.one?.close&&p.archive?.two?.close&&a!=null&&b!=null){const x=(a-p.archive.one.close)/p.archive.one.close*100,y=(b-p.archive.two.close)/p.archive.two.close*100,d=x-y;$("dist").textContent=pctFmt(d);$("dist").className='big '+(d>0?'positive':d<0?'negative':'neutral');$("formula").textContent=pctFmt(x)+' − ('+pctFmt(y)+') = '+pctFmt(d)}else{$("dist").textContent='—';$("formula").textContent='Сначала загрузите архивную точку 0'}
+  renderLists();
+}
+function getArchive(instId,targetMs){const url='https://www.okx.com/api/v5/market/history-candles?instId='+encodeURIComponent(instId)+'&bar=1m&after='+encodeURIComponent(String(targetMs+60000))+'&limit=10';return fetch(url,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(instId+': HTTP '+r.status);return r.json()}).then(j=>{if(j.code!=='0')throw new Error(instId+': OKX code '+j.code+' '+(j.msg||''));const rows=(j.data||[]).map(x=>({ts:Number(x[0]),open:Number(x[1]),high:Number(x[2]),low:Number(x[3]),close:Number(x[4]),confirm:String(x[8])}));const exact=rows.find(x=>x.ts===targetMs);if(!exact)throw new Error(instId+': точной 1m свечи нет');return exact})}
+async function loadArchive(){const p=activePair();if(!p)return;const d=$("date").value,t=$("time").value;if(!d||!t){alert('Выберите дату и время точки 0.');return}const targetMs=new Date(d+'T'+t+':00').getTime();if(!Number.isFinite(targetMs)||targetMs>Date.now()){alert('Неверная дата/время или точка в будущем.');return}$("start").disabled=true;$("archiveState").textContent='загрузка…';$("archiveState").className='warn';setGlobal('АРХИВ','wait');$("archiveStatus").textContent='Запрашиваю исторические 1m свечи OKX для обоих инструментов…';try{const [one,two]=await Promise.all([getArchive(p.inst1,targetMs),getArchive(p.inst2,targetMs)]);p.baseline=d+'T'+t;p.archive={one,two};save();renderPair();setGlobal('LIVE','live');renderHistory()}catch(e){console.error(e);$("archiveState").textContent='ошибка';$("archiveState").className='err';$("archiveStatus").textContent='Ошибка архива: '+e.message;setGlobal('АРХИВ: ОШИБКА','bad');alert('Не удалось получить архивную точку 0.\n\n'+e.message)}finally{$("start").disabled=false}}
+function stopSocket(){if(state.reconnectTimer){clearTimeout(state.reconnectTimer);state.reconnectTimer=null}state.wsSeq++;const old=state.ws;if(old){old.onopen=old.onmessage=old.onerror=old.onclose=null;try{old.close()}catch(e){}}state.ws=null}
+function scheduleReconnect(seq){if(state.reconnectTimer||seq!==state.wsSeq)return;state.reconnectTimer=setTimeout(()=>{state.reconnectTimer=null;if(seq===state.wsSeq)connect()},3000)}
+function connect(){stopSocket();const p=activePair();if(!p)return;const seq=state.wsSeq;setGlobal('ПОДКЛЮЧЕНИЕ','wait');$('wsState').textContent='CONNECTING';const ws=new WebSocket('wss://ws.okx.com:8443/ws/v5/public');state.ws=ws;ws.onopen=()=>{if(seq!==state.wsSeq)return;$('wsState').textContent='OPEN';ws.send(JSON.stringify({op:'subscribe',args:[{channel:'tickers',instId:p.inst1},{channel:'tickers',instId:p.inst2}]}))};ws.onmessage=e=>{if(seq!==state.wsSeq)return;try{const m=JSON.parse(e.data);if(m.data&&m.data[0]){const row=m.data[0],id=row.instId;if(id===p.inst1||id===p.inst2){state.live[id]=Number(row.last);state.lastTick[id]=Number(row.ts)||Date.now()}if(state.live[p.inst1]!=null&&state.live[p.inst2]!=null)setGlobal('LIVE','live');if(!$('page-pair').classList.contains('hidden'))renderLivePair();else renderLists()}}catch(err){}};ws.onerror=()=>{if(seq!==state.wsSeq)return;$('wsState').textContent='ERROR';setGlobal('RECONNECTING','wait')};ws.onclose=()=>{if(seq!==state.wsSeq)return;$('wsState').textContent='CLOSED';setGlobal('RECONNECTING','wait');scheduleReconnect(seq)}}
+function renderHistory(){const box=$("historyList");const items=[];state.pairs.forEach(p=>{if(p.baseline&&p.archive?.one&&p.archive?.two)items.push(`<div class="panel"><div class="status"><b>${esc(p.name)}</b><span class="ok">ТОЧКА 0</span></div><div class="meta"><div class="metric"><span>${esc(p.label1)}</span><b>${fmt(p.archive.one.close)}</b></div><div class="metric"><span>${esc(p.label2)}</span><b>${fmt(p.archive.two.close)}</b></div></div><div class="note" style="margin-top:10px">OKX · ${esc(formatLocal(p.archive.one.ts))} · закрытие 1m</div><button class="ghost" style="margin-top:10px;width:100%" data-open-pair="${p.id}">Открыть пару</button></div>`)});box.innerHTML=items.length?items.join(''):'<div class="panel empty">Сохранённых архивных точек пока нет.</div>';box.querySelectorAll('[data-open-pair]').forEach(b=>b.onclick=()=>openPair(b.dataset.openPair))}
+function askDelete(id){const p=state.pairs.find(x=>x.id===id);if(!p)return;state.pendingDelete=id;$("modalText").textContent='Действительно удалить пару «'+p.name+'»? Сохранённая точка 0 для неё тоже будет удалена.';$("modalBack").style.display='flex'}
+function confirmDelete(){const id=state.pendingDelete;if(!id)return;state.pairs=state.pairs.filter(p=>p.id!==id);if(state.activeId===id)state.activeId=state.pairs[0]?.id||null;save();state.pendingDelete=null;$("modalBack").style.display='none';renderLists();renderHistory();if(state.activeId){openPair(state.activeId)}else currentPage('overview')}
+
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>{const pg=b.dataset.page;if(pg==='new'){showNew();return}if(pg==='overview'){currentPage('overview');renderLists();return}if(pg==='pairs'){currentPage('pairs');renderLists();return}if(pg==='history'){currentPage('history');renderHistory();return}currentPage(pg)})
+$('goNew').onclick=showNew;$('goNew2').onclick=showNew;$('cancelNew').onclick=()=>{resetPicker();renderCatalog();};document.querySelectorAll('#instrumentTabs .instrumentTab').forEach(b=>b.onclick=()=>{catalog.kind=b.dataset.kind;document.querySelectorAll('#instrumentTabs .instrumentTab').forEach(x=>x.classList.toggle('active',x===b));renderCatalog()});$('instrumentSearch').oninput=e=>{catalog.search=e.target.value.toUpperCase();if(e.target.value!==catalog.search)e.target.value=catalog.search;renderCatalog()};
+document.querySelectorAll('[data-quote]').forEach(b=>b.onclick=()=>{catalog.quote=b.dataset.quote;document.querySelectorAll('[data-quote]').forEach(x=>x.classList.toggle('active',x===b));renderCatalog()});
+document.querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>{catalog.type=b.dataset.type;document.querySelectorAll('[data-type]').forEach(x=>x.classList.toggle('active',x===b));renderCatalog()});
+$('saveNew').onclick=saveNew;$('pairSearch').oninput=renderLists;$('start').onclick=loadArchive;$('deletePairTop').onclick=()=>askDelete(state.activeId);$('modalCancel').onclick=()=>{$('modalBack').style.display='none';state.pendingDelete=null};$('modalConfirm').onclick=confirmDelete;
+
+load();renderLists();renderHistory();if(state.activeId)renderPair();connect();loadCatalog();
+</script>
+</body>
+</html>
