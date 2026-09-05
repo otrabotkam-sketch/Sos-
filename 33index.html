@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pair Trading Terminal — v0.6.0</title>
+<style>
+:root{background:#050607;color:#eee;font-family:Inter,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#080a0c,#030405);min-height:100vh}
+.app{max-width:820px;margin:auto;padding:18px;padding-bottom:88px}
+h1{font-size:24px;margin:4px 0 3px}
+.ver{font-size:12px;color:#777;margin-bottom:16px}
+.panel{background:#0c1013;border:1px solid #1b2227;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 10px 35px #0008}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.field{flex:1;min-width:145px}
+.field label{display:block;color:#8d979d;font-size:12px;margin-bottom:7px}
+input{width:100%;background:#11161a;color:#fff;border:1px solid #273037;border-radius:11px;padding:12px;font-size:16px}
+select{background:#11161a;color:#fff;border:1px solid #273037;border-radius:11px;padding:12px 8px;font-size:15px}
+button{background:#161d22;color:#fff;border:1px solid #303a41;border-radius:11px;padding:12px 16px;font-weight:700;cursor:pointer}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.55;cursor:default}
+.status{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9ba4a9;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.live{color:#35ff68;font-weight:800}
+.wait{color:#ffc52b;font-weight:800}
+.bad{color:#ff5353;font-weight:800}
+.note{font-size:12px;color:#777;line-height:1.5}
+.mono{font-family:ui-monospace,monospace}
+.small{font-size:11px;color:#69747a}
+.ok{color:#35ff68}
+.warn{color:#ffc52b}
+.err{color:#ff6464}
+
+.chartHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px}
+.chartTitle{font-size:15px;font-weight:800}
+.legend{display:flex;gap:14px;font-size:12px;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.expandBtn{background:#11161a;border:1px solid #273037;color:#cfd6da;border-radius:9px;width:32px;height:32px;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.expandBtn:active{transform:scale(.94)}
+.chartWrap{position:relative;touch-action:none}
+canvas{width:100%;display:block;border-radius:12px;background:#090c0e}
+.chartHint{font-size:11px;color:#5c666c;margin-top:6px;text-align:center}
+.fsBar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid #1c2429}
+.fsBar .tmBtns{margin-top:0}
+.fsBar button{padding:7px 10px;font-size:11px}
+.fsLabel{font-size:11px;color:#9aa7ad;white-space:nowrap}
+
+body.noScroll{overflow:hidden}
+.panel.fullscreenChart{position:fixed;inset:0;z-index:1000;margin:0;border-radius:0;
+  display:flex;flex-direction:column;padding:14px;box-shadow:none;border:none}
+.panel.fullscreenChart .chartWrap{flex:1;min-height:0}
+.panel.fullscreenChart canvas{height:100%!important}
+.panel.fullscreenChart .chartHint{flex:none}
+
+.result{text-align:center;padding:14px 8px}
+.result small{color:#7d878d;letter-spacing:.5px}
+.result .big{font-size:50px;font-weight:950;margin:8px 0;text-shadow:0 0 24px currentColor2}
+.result .big.positive{color:#35ff68;text-shadow:0 0 24px #35ff6838}
+.result .big.negative{color:#ff6464;text-shadow:0 0 24px #ff646438}
+.result .big.neutral{color:#ddd}
+
+.miniGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.metric{background:#11161a;border-radius:11px;padding:10px}
+.metric span{display:block;color:#778188;font-size:11px}
+.metric b{font-size:16px}
+.positive{color:#35ff68}
+.negative{color:#ff6464}
+.neutral{color:#ddd}
+
+.crosshair{position:absolute;top:0;left:0;pointer-events:none;font-size:11px;color:#cfd6da;background:#0f1418ee;border:1px solid #263039;border-radius:8px;padding:6px 9px;display:none;white-space:nowrap;z-index:3}
+.vline{position:absolute;top:0;bottom:0;width:1px;background:#4a5560cc;pointer-events:none;display:none;z-index:2}
+.settingsRow{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.settingsRow label{display:flex;align-items:center;gap:7px;font-size:13px;color:#cfd6da;min-width:auto}
+.tmBtns{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.tmBtns button{padding:9px 12px;font-size:13px}
+
+@media(max-width:520px){.miniGrid{grid-template-columns:1fr}}
+
+/* ---------- navigation + pages ---------- */
+.page{display:none}
+.page.active{display:block}
+
+.bottomNav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0c1013;
+  border-top:1px solid #1b2227;z-index:500;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.bottomNav button{flex:1;background:none;border:none;color:#7d878d;display:flex;
+  flex-direction:column;align-items:center;gap:2px;font-size:10px;padding:6px 2px;
+  border-radius:10px;font-weight:600}
+.bottomNav button .ic{font-size:18px;line-height:1}
+.bottomNav button.active{color:#35ff68;background:#11161a}
+
+@media(min-width:900px){
+  body{display:flex}
+  .bottomNav{position:fixed;left:0;top:0;bottom:0;right:auto;width:84px;
+    flex-direction:column;border-top:none;border-right:1px solid #1b2227;padding:14px 4px;gap:2px}
+  .app{margin-left:84px;padding-bottom:18px;max-width:900px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ================= SCANNER ================= -->
+<div id="page-scanner" class="page">
+  <h1>Scanner</h1>
+  <div class="ver">Автоматический поиск и рейтинг пар</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">
+      Scanner будет перебирать инструменты OKX SWAP и товарные perpetual-контракты, формировать пары
+      и находить стартовые точки с наиболее повторяемым циклом конвергенция → дивергенция → конвергенция.
+      Для каждой пары — Current/Average/Max Spread, количество волн, рейтинг A+…D и Distance To Signal.
+    </div>
+  </div>
+  <div class="panel">
+    <div class="note">Пока Scanner не готов, пару можно выбрать вручную на вкладке «Пара».</div>
+  </div>
+</div>
+
+<!-- ================= WATCHLIST ================= -->
+<div id="page-watchlist" class="page">
+  <h1>Watchlist</h1>
+  <div class="ver">Сохранённые пары для наблюдения</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">
+      Здесь появятся сохранённые пары (до 6 на странице): Pair, Current/Average/Max Spread, Rating,
+      Distance To Signal — с возможностью открыть Pair Lab или удалить пару.
+    </div>
+  </div>
+</div>
+
+<!-- ================= PAIR SELECTION ================= -->
+<div id="page-select" class="page">
+  <h1>Выбор пары</h1>
+  <div class="ver">Ручной выбор инструментов A и B по OKX instId</div>
+  <div class="panel">
+    <div class="row">
+      <div class="field"><label>Инструмент A</label>
+        <input id="instAInput" value="XAG-USDT-SWAP" placeholder="напр. XAG-USDT-SWAP">
+      </div>
+      <div class="field"><label>Инструмент B</label>
+        <input id="instBInput" value="CL-USDT-SWAP" placeholder="напр. CL-USDT-SWAP">
+      </div>
+    </div>
+    <div class="note" style="margin-top:10px">
+      Указывайте оригинальный instId так, как его отдаёт OKX (например BTC-USDT-SWAP, XAU-USDT-SWAP).
+      Список инструментов и поиск по API OKX появятся на следующем этапе.
+    </div>
+    <div style="margin-top:14px"><button id="analyzeBtn" style="width:100%">Анализировать пару →</button></div>
+  </div>
+</div>
+
+<!-- ================= PAIR LAB ================= -->
+<div id="page-lab" class="page active">
+<h1>Pair Trading Terminal</h1>
+<div class="ver">v0.6.0 · Pair Lab — математика и графики v0.5.1 без изменений, пара выбирается на вкладке «Пара»</div>
+
+<div class="panel">
+  <div class="status">
+    <span id="pairStatusLabel">Пара: <b>XAG-USDT-SWAP</b> / <b>CL-USDT-SWAP</b> · Источник: <b>OKX</b></span>
+    <span id="status" class="wait">● ОЖИДАНИЕ</span>
+  </div>
+  <div class="row">
+    <div class="field"><label>Дата точки старта</label>
+      <div style="display:flex;gap:6px">
+        <select id="dSel"></select>
+        <select id="mSel"></select>
+        <select id="ySel"></select>
+      </div>
+    </div>
+    <div class="field"><label>Время точки старта</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="hSel"></select>
+        <span>:</span>
+        <select id="minSel"></select>
+      </div>
+    </div>
+    <button id="start">Загрузить точку старта</button>
+  </div>
+  <div id="archiveStatus" class="note" style="margin-top:10px">
+    Точка старта пока не загружена.
+  </div>
+</div>
+
+<div class="panel" id="perfPanel">
+  <div class="chartHead">
+    <div class="chartTitle">Performance</div>
+    <div class="legend">
+      <span><i class="dot" style="background:#35ff68"></i><span id="legA">XAG</span></span>
+      <span><i class="dot" style="background:#ffb648"></i><span id="legB">CL</span></span>
+      <button class="expandBtn" id="perfExpand" title="На весь экран">⛶</button>
+    </div>
+  </div>
+  <div class="fsBar">
+    <div class="tmBtns">
+      <button class="tmMini" data-shift="-24">◀◀ 24ч</button>
+      <button class="tmMini" data-shift="-1">◀ 1ч</button>
+      <button class="tmMini" data-shift="1">1ч ▶</button>
+      <button class="tmMini" data-shift="24">24ч ▶▶</button>
+    </div>
+    <div class="fsLabel" id="perfFsLabel">Старт: — · Сейчас: —</div>
+  </div>
+  <div class="chartWrap">
+    <canvas id="perfChart" height="220"></canvas>
+    <div id="perfVLine" class="vline"></div>
+    <div id="perfCross" class="crosshair"></div>
+  </div>
+  <div class="chartHint">Колесо мыши над графиком — сдвиг точки старта на ±1 час</div>
+</div>
+
+<div class="panel" id="spreadPanel">
+  <div class="chartHead">
+    <div class="chartTitle">Spread</div>
+    <div class="legend">
+      <span><i class="dot" style="background:#35ff68"></i><span id="spreadLegPos">XAG% − CL% &gt; 0</span></span>
+      <span><i class="dot" style="background:#ff6464"></i><span id="spreadLegNeg">&lt; 0</span></span>
+      <button class="expandBtn" id="spreadExpand" title="На весь экран">⛶</button>
+    </div>
+  </div>
+  <div class="fsBar">
+    <div class="tmBtns">
+      <button class="tmMini" data-shift="-24">◀◀ 24ч</button>
+      <button class="tmMini" data-shift="-1">◀ 1ч</button>
+      <button class="tmMini" data-shift="1">1ч ▶</button>
+      <button class="tmMini" data-shift="24">24ч ▶▶</button>
+    </div>
+    <div class="fsLabel" id="spreadFsLabel">Старт: — · Сейчас: —</div>
+  </div>
+  <div class="chartWrap">
+    <canvas id="spreadChart" height="150"></canvas>
+    <div id="spreadVLine" class="vline"></div>
+    <div id="spreadCross" class="crosshair"></div>
+  </div>
+  <div class="chartHint">Колесо мыши над графиком — сдвиг точки старта на ±1 час</div>
+</div>
+
+
+<div class="panel">
+  <div class="tmBtns" style="margin-top:0;margin-bottom:14px">
+    <button id="tmBack24">◀◀ -24ч</button>
+    <button id="tmBack1">◀ -1ч</button>
+    <button id="tmFwd1">+1ч ▶</button>
+    <button id="tmFwd24">+24ч ▶▶</button>
+  </div>
+  <div class="chartTitle">Wave Analyzer</div>
+  <div class="miniGrid">
+    <div class="metric"><span>Волн найдено</span><b id="waveCount">—</b></div>
+    <div class="metric"><span>Средняя амплитуда</span><b id="waveAvgAmp">—</b></div>
+    <div class="metric"><span>Максимальная амплитуда</span><b id="waveMaxAmp">—</b></div>
+    <div class="metric"><span>Среднее время возврата</span><b id="waveAvgTime">—</b></div>
+    <div class="metric"><span>Возвратов к нулю</span><b id="waveReturnPct">—</b></div>
+    <div class="metric"><span>Рейтинг пары</span><b id="waveGrade">—</b></div>
+  </div>
+</div>
+
+
+<div class="panel result">
+  <small id="distLabel">РАСХОЖДЕНИЕ СЕЙЧАС (XAG% − CL%)</small>
+  <div id="dist" class="big neutral">—</div>
+  <div id="formula" class="note mono">Сначала загрузите точку старта</div>
+</div>
+
+<div class="panel">
+  <div class="miniGrid">
+    <div class="metric"><span id="labelXagLive">XAG live / база</span><b id="xagLive">—</b></div>
+    <div class="metric"><span id="labelClLive">CL live / база</span><b id="clLive">—</b></div>
+    <div class="metric"><span id="labelXagPct">XAG %</span><b id="xagPct" class="neutral">—</b></div>
+    <div class="metric"><span id="labelClPct">CL %</span><b id="clPct" class="neutral">—</b></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="note">
+    Точка старта берётся из закрытия 1‑минутной свечи OKX (history‑candles). История для графиков — часовые (1H) свечи
+    от точки старта до текущего момента; текущая цена дополняется live‑потоком (WebSocket ticker). Прокрутка колеса
+    над любым графиком сдвигает точку старта на 1 час вперёд/назад и полностью пересчитывает оба графика.
+  </div>
+</div>
+
+<div class="panel" id="displaySettings">
+  <div class="chartTitle" style="margin-bottom:10px">Отображение</div>
+  <div class="settingsRow">
+    <label><input type="checkbox" id="optCrosshair" checked> Перекрестие</label>
+    <label><input type="checkbox" id="optPoints" checked> Точки на графике</label>
+    <label><input type="checkbox" id="optWaves" checked> Волны на графике</label>
+    <label>Толщина линий: <span id="lineWidthVal">2</span>px
+      <input type="range" id="optLineWidth" min="1" max="5" value="2" style="width:100px">
+    </label>
+  </div>
+</div>
+</div>
+<!-- ============== /PAIR LAB ============== -->
+
+<!-- ================= ALERTS ================= -->
+<div id="page-alerts" class="page">
+  <h1>Alerts</h1>
+  <div class="ver">Оповещения по условиям входа/выхода</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">
+      Здесь можно будет задать Entry/Exit уровни и условия закрытия по выбранной паре. Оповещения,
+      работающие независимо от открытого приложения, потребуют серверной части — это отдельный этап
+      после базового Scanner.
+    </div>
+  </div>
+</div>
+
+<!-- ================= ACCOUNT ================= -->
+<div id="page-account" class="page">
+  <h1>Account</h1>
+  <div class="ver">Страница аккаунта</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">Подписка, лимиты Watchlist и настройки профиля появятся здесь позже.</div>
+  </div>
+</div>
+
+</div>
+
+<nav class="bottomNav" id="bottomNav">
+  <button data-page="scanner"><span class="ic">📡</span><span>Scanner</span></button>
+  <button data-page="watchlist"><span class="ic">⭐</span><span>Watchlist</span></button>
+  <button data-page="select"><span class="ic">🔀</span><span>Пара</span></button>
+  <button data-page="lab" class="active"><span class="ic">📊</span><span>Pair Lab</span></button>
+  <button data-page="alerts"><span class="ic">🔔</span><span>Alerts</span></button>
+  <button data-page="account"><span class="ic">👤</span><span>Account</span></button>
+</nav>
+
+<script>
+const HOUR=3600000;
+const MAX_PAGES=20; // up to ~6 months of 1H candles
+
+const pairState={a:"XAG-USDT-SWAP",b:"CL-USDT-SWAP"};
+
+const state={
+  startMs:null,
+  base:{xag:null,cl:null},
+  live:{xag:null,cl:null},
+  hist:{xag:[],cl:[]}, // [{ts,pct}]
+  waves:[],
+  ws:null,
+  loading:false
+};
+
+const settings={
+  crosshair:true,
+  points:true,
+  waves:true,
+  lineWidth:2
+};
+
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:8});
+const pctFmt=n=>(n>=0?"+":"")+n.toFixed(2)+"%";
+const shortName=instId=>(instId.split("-")[0]||instId);
+
+function setStatus(t,c){$("status").textContent="● "+t;$("status").className=c}
+function formatLocal(ts){return new Date(ts).toLocaleString("ru-RU",{hour12:false})}
+
+function paintMetric(el,v){
+  el.textContent=pctFmt(v);
+  el.className=v>0?"positive":v<0?"negative":"neutral";
+}
+
+// ---------- pair labels ----------
+
+function applyPairLabels(){
+  const a=shortName(pairState.a),b=shortName(pairState.b);
+  $("pairStatusLabel").innerHTML="Пара: <b>"+pairState.a+"</b> / <b>"+pairState.b+"</b> · Источник: <b>OKX</b>";
+  $("legA").textContent=a;
+  $("legB").textContent=b;
+  $("spreadLegPos").textContent=a+"% − "+b+"% > 0";
+  $("distLabel").textContent="РАСХОЖДЕНИЕ СЕЙЧАС ("+a+"% − "+b+"%)";
+  $("labelXagLive").textContent=a+" live / база";
+  $("labelClLive").textContent=b+" live / база";
+  $("labelXagPct").textContent=a+" %";
+  $("labelClPct").textContent=b+" %";
+}
+
+function setPair(a,b){
+  pairState.a=a;pairState.b=b;
+  state.startMs=null;
+  state.base={xag:null,cl:null};
+  state.live={xag:null,cl:null};
+  state.hist={xag:[],cl:[]};
+  state.waves=[];
+  applyPairLabels();
+  $("archiveStatus").textContent="Точка старта пока не загружена.";
+  $("dist").textContent="—";$("dist").className="big neutral";
+  $("formula").textContent="Сначала загрузите точку старта";
+  ["waveCount","waveAvgAmp","waveMaxAmp","waveAvgTime","waveReturnPct","waveGrade"].forEach(id=>$(id).textContent="—");
+  $("xagLive").textContent="—";$("clLive").textContent="—";
+  $("xagPct").textContent="—";$("xagPct").className="neutral";
+  $("clPct").textContent="—";$("clPct").className="neutral";
+  setStatus("ОЖИДАНИЕ","wait");
+  renderCharts();
+  connect();
+  const targetMs=getTargetMsFromSelects();
+  if(Number.isFinite(targetMs)&&targetMs<=Date.now())loadStartPoint(targetMs);
+}
+
+// ---------- OKX fetch helpers ----------
+
+async function getMinuteClose(instId,targetMs){
+  const url="https://www.okx.com/api/v5/market/history-candles?instId="+encodeURIComponent(instId)+
+            "&bar=1m&after="+encodeURIComponent(String(targetMs+60000))+"&limit=10";
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error(instId+": HTTP "+r.status);
+  const j=await r.json();
+  if(j.code!=="0")throw new Error(instId+": OKX code "+j.code+" "+(j.msg||""));
+  const target=Number(targetMs);
+  const rows=(j.data||[]).map(x=>({ts:Number(x[0]),close:Number(x[4])}));
+  const exact=rows.find(x=>x.ts===target);
+  if(!exact){
+    const nearby=rows.sort((a,b)=>Math.abs(a.ts-target)-Math.abs(b.ts-target))[0];
+    throw new Error(instId+": точной 1m свечи нет. Ближайшая "+(nearby?formatLocal(nearby.ts):"не найдена"));
+  }
+  return exact;
+}
+
+async function getHourlyCandles(instId,fromMs,toMs){
+  let cursor=toMs+HOUR;
+  const all=[];
+  for(let page=0;page<MAX_PAGES;page++){
+    const url="https://www.okx.com/api/v5/market/history-candles?instId="+encodeURIComponent(instId)+
+              "&bar=1H&after="+encodeURIComponent(String(cursor))+"&limit=300";
+    const r=await fetch(url,{cache:"no-store"});
+    if(!r.ok)throw new Error(instId+": HTTP "+r.status);
+    const j=await r.json();
+    if(j.code!=="0")throw new Error(instId+": OKX code "+j.code+" "+(j.msg||""));
+    const rows=(j.data||[]).map(x=>({ts:Number(x[0]),close:Number(x[4])}));
+    if(rows.length===0)break;
+    all.push(...rows);
+    const earliest=rows[rows.length-1].ts;
+    if(earliest<=fromMs)break;
+    cursor=earliest;
+  }
+  return all.filter(x=>x.ts>=fromMs&&x.ts<=toMs).sort((a,b)=>a.ts-b.ts);
+}
+
+// ---------- canvas line chart ----------
+
+function drawChart(canvas,series,opts){
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth,h=canvas.clientHeight||canvas.height;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  const allVals=series.flatMap(s=>s.points.map(p=>p.v));
+  if(allVals.length===0){
+    ctx.fillStyle="#5c666c";ctx.font="12px Inter,Arial";ctx.textAlign="center";
+    ctx.fillText("Нет данных — загрузите точку старта",w/2,h/2);
+    return null;
+  }
+  let vMin=Math.min(...allVals,0),vMax=Math.max(...allVals,0);
+  if(vMin===vMax){vMin-=1;vMax+=1}
+  const pad=(vMax-vMin)*0.12;vMin-=pad;vMax+=pad;
+
+  const tMin=Math.min(...series.flatMap(s=>s.points.map(p=>p.t)));
+  const tMax=Math.max(...series.flatMap(s=>s.points.map(p=>p.t)));
+  const tSpan=Math.max(tMax-tMin,1);
+
+  const ml=44,mr=10,mt=10,mb=18;
+  const iw=w-ml-mr,ih=h-mt-mb;
+  const X=t=>ml+((t-tMin)/tSpan)*iw;
+  const Y=v=>mt+(1-(v-vMin)/(vMax-vMin))*ih;
+
+  // grid
+  ctx.strokeStyle="#1a2227";ctx.lineWidth=1;
+  const gridN=4;
+  ctx.fillStyle="#5c666c";ctx.font="10px Inter,Arial";ctx.textAlign="right";
+  for(let i=0;i<=gridN;i++){
+    const v=vMin+(vMax-vMin)*i/gridN;
+    const y=Y(v);
+    ctx.beginPath();ctx.moveTo(ml,y+0.5);ctx.lineTo(w-mr,y+0.5);ctx.stroke();
+    ctx.fillText(v.toFixed(1)+"%",ml-6,y+3);
+  }
+  // zero line emphasized
+  if(vMin<0&&vMax>0){
+    ctx.strokeStyle="#3a4650";ctx.lineWidth=1.3;
+    const y=Y(0);
+    ctx.beginPath();ctx.moveTo(ml,y+0.5);ctx.lineTo(w-mr,y+0.5);ctx.stroke();
+  }
+
+  // fill for single-series spread chart
+  if(opts&&opts.fillZero&&series.length===1){
+    const pts=series[0].points;
+    ctx.beginPath();
+    pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.lineTo(X(pts[pts.length-1].t),Y(0));
+    ctx.lineTo(X(pts[0].t),Y(0));
+    ctx.closePath();
+    ctx.fillStyle="#35ff6812";
+    ctx.fill();
+  }
+
+  series.forEach(s=>{
+    const pts=s.points;
+    if(pts.length===0)return;
+    ctx.lineWidth=(opts&&opts.lineWidth)||2;
+    ctx.strokeStyle=s.color;
+    ctx.beginPath();
+    pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.stroke();
+
+    // per-point dots (skip if too dense, keep chart readable)
+    if(opts&&opts.showPoints&&pts.length<=400){
+      ctx.fillStyle=s.color;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.v),2,0,Math.PI*2);ctx.fill()});
+    }else{
+      const last=pts[pts.length-1];
+      ctx.fillStyle=s.color;
+      ctx.beginPath();ctx.arc(X(last.t),Y(last.v),3.2,0,Math.PI*2);ctx.fill();
+    }
+  });
+
+  return {X,Y,vMin,vMax,tMin,tMax,ml,mr,mt,mb,w,h};
+}
+
+function nearestPoint(arr,t){
+  if(!arr||!arr.length)return null;
+  let best=arr[0];
+  for(const p of arr){if(Math.abs(p.ts-t)<Math.abs(best.ts-t))best=p}
+  return best;
+}
+
+function drawWaveMarkers(canvas,geo,waves){
+  if(!geo||!waves||!waves.length)return;
+  const ctx=canvas.getContext("2d");
+  waves.forEach(w=>{
+    if(w.startTs>=geo.tMin&&w.startTs<=geo.tMax){
+      const x=geo.X(w.startTs);
+      ctx.save();
+      ctx.strokeStyle="#5c666c";ctx.setLineDash([3,3]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,geo.mt);ctx.lineTo(x,geo.h-geo.mb);ctx.stroke();
+      ctx.restore();
+    }
+    if(w.peakTs!=null&&w.peakTs>=geo.tMin&&w.peakTs<=geo.tMax){
+      const x=geo.X(w.peakTs),y=geo.Y(w.peakVal);
+      ctx.fillStyle=w.peakVal>=0?"#35ff68":"#ff6464";
+      ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#0a0d0f";ctx.lineWidth=1.2;ctx.stroke();
+    }
+    if(w.endTs!=null&&w.endTs>=geo.tMin&&w.endTs<=geo.tMax){
+      const x=geo.X(w.endTs);
+      ctx.save();
+      ctx.strokeStyle="#7c8ea8";ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(x,geo.mt);ctx.lineTo(x,geo.h-geo.mb);ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+function renderCharts(){
+  const perfCanvas=$("perfChart"),spreadCanvas=$("spreadChart");
+  const drawOpts={lineWidth:settings.lineWidth,showPoints:settings.points};
+
+  const perfSeries=[
+    {name:shortName(pairState.a),color:"#35ff68",points:state.hist.xag.map(p=>({t:p.ts,v:p.pct}))},
+    {name:shortName(pairState.b),color:"#ffb648",points:state.hist.cl.map(p=>({t:p.ts,v:p.pct}))}
+  ];
+  const geo1=drawChart(perfCanvas,perfSeries,drawOpts);
+  perfCanvas._geo=geo1;
+
+  analyzeWaves(); // populates state.waves + wave metric text, ahead of spread chart draw
+
+  const n=Math.min(state.hist.xag.length,state.hist.cl.length);
+  const spreadPts=[];
+  for(let i=0;i<n;i++){
+    spreadPts.push({t:state.hist.xag[i].ts,v:state.hist.xag[i].pct-state.hist.cl[i].pct});
+  }
+  const lastSpread=spreadPts.length?spreadPts[spreadPts.length-1].v:0;
+  const spreadSeries=[{name:"Spread",color:lastSpread>=0?"#35ff68":"#ff6464",points:spreadPts}];
+  const geo2=drawChart(spreadCanvas,spreadSeries,{...drawOpts,fillZero:true});
+  spreadCanvas._geo=geo2;
+  if(settings.waves)drawWaveMarkers(spreadCanvas,geo2,state.waves);
+}
+
+
+function analyzeWaves(){
+
+  const n=Math.min(state.hist.xag.length,state.hist.cl.length);
+  if(n<10){state.waves=[];return}
+
+  const spread=[];
+
+  for(let i=0;i<n;i++){
+    spread.push({
+      ts:state.hist.xag[i].ts,
+      value:state.hist.xag[i].pct-state.hist.cl[i].pct
+    });
+  }
+
+  const waves=[];
+  let current=null;
+
+  for(let i=1;i<spread.length;i++){
+
+    const prev=spread[i-1].value;
+    const cur=spread[i].value;
+
+    if(current===null){
+
+      if(Math.abs(cur)>2){
+        current={
+          startTs:spread[i].ts,
+          maxAbs:Math.abs(cur),
+          peakTs:spread[i].ts,
+          peakVal:cur
+        };
+      }
+
+    }else{
+
+      if(Math.abs(cur)>current.maxAbs){
+        current.maxAbs=Math.abs(cur);
+        current.peakTs=spread[i].ts;
+        current.peakVal=cur;
+      }
+
+      if((prev>0&&cur<=0)||(prev<0&&cur>=0)){
+
+        current.endTs=spread[i].ts;
+        current.duration=current.endTs-current.startTs;
+
+        waves.push(current);
+        current=null;
+      }
+    }
+  }
+
+  state.waves=waves;
+  if(!waves.length)return;
+
+  const avgAmp=waves.reduce((s,w)=>s+w.maxAbs,0)/waves.length;
+  const maxAmp=Math.max(...waves.map(w=>w.maxAbs));
+  const avgTime=waves.reduce((s,w)=>s+w.duration,0)/waves.length;
+  const returnPct=waves.length/Math.max(spread.length/24,1);
+
+  let grade="C";
+  if(avgAmp>8&&returnPct>0.7)grade="A";
+  else if(avgAmp>5&&returnPct>0.5)grade="B";
+
+  document.getElementById("waveCount").textContent=waves.length;
+  document.getElementById("waveAvgAmp").textContent=avgAmp.toFixed(2)+"%";
+  document.getElementById("waveMaxAmp").textContent=maxAmp.toFixed(2)+"%";
+  document.getElementById("waveAvgTime").textContent=(avgTime/3600000).toFixed(1)+" ч";
+  document.getElementById("waveReturnPct").textContent=(returnPct*100).toFixed(0)+"%";
+  document.getElementById("waveGrade").textContent=grade;
+}
+
+
+// ---------- live price handling ----------
+
+function updateLiveMetrics(){
+  const a=state.live.xag,b=state.live.cl;
+  if(state.base.xag!=null){
+    $("xagLive").textContent=(a!=null?fmt(a):"—")+" / "+fmt(state.base.xag);
+    if(a!=null)paintMetric($("xagPct"),(a-state.base.xag)/state.base.xag*100);
+  }
+  if(state.base.cl!=null){
+    $("clLive").textContent=(b!=null?fmt(b):"—")+" / "+fmt(state.base.cl);
+    if(b!=null)paintMetric($("clPct"),(b-state.base.cl)/state.base.cl*100);
+  }
+  // append/replace the trailing live point onto the hourly history so the chart reaches "now"
+  if(state.base.xag!=null&&state.base.cl!=null&&a!=null&&b!=null&&state.hist.xag.length){
+    const nowTs=Date.now();
+    const xagPct=(a-state.base.xag)/state.base.xag*100;
+    const clPct=(b-state.base.cl)/state.base.cl*100;
+    const lastX=state.hist.xag[state.hist.xag.length-1];
+    const lastC=state.hist.cl[state.hist.cl.length-1];
+    const point={ts:nowTs,pct:xagPct};
+    const pointC={ts:nowTs,pct:clPct};
+    if(lastX&&nowTs-lastX.ts<HOUR*2){state.hist.xag[state.hist.xag.length-1]=point}
+    else{state.hist.xag.push(point)}
+    if(lastC&&nowTs-lastC.ts<HOUR*2){state.hist.cl[state.hist.cl.length-1]=pointC}
+    else{state.hist.cl.push(pointC)}
+    renderCharts();
+
+    const d=xagPct-clPct;
+    const distEl=$("dist");
+    distEl.textContent=pctFmt(d);
+    distEl.className="big "+(d>0?"positive":d<0?"negative":"neutral");
+    $("formula").textContent=pctFmt(xagPct)+" − ("+pctFmt(clPct)+") = "+pctFmt(d);
+  }
+}
+
+// ---------- start point loading ----------
+
+async function loadStartPoint(targetMs){
+  if(state.loading)return;
+  if(targetMs>Date.now()){alert("Точка старта не может быть в будущем.");return}
+  state.loading=true;
+  $("start").disabled=true;
+  $("archiveStatus").textContent="Загружаю точку старта и часовую историю…";
+  setStatus("ЗАГРУЗКА","wait");
+  try{
+    const [xagBase,clBase]=await Promise.all([
+      getMinuteClose(pairState.a,targetMs),
+      getMinuteClose(pairState.b,targetMs)
+    ]);
+    state.startMs=targetMs;
+    state.base={xag:xagBase.close,cl:clBase.close};
+
+    const nowMs=Date.now();
+    const [xagHist,clHist]=await Promise.all([
+      getHourlyCandles(pairState.a,targetMs,nowMs),
+      getHourlyCandles(pairState.b,targetMs,nowMs)
+    ]);
+    state.hist.xag=xagHist.map(c=>({ts:c.ts,pct:(c.close-state.base.xag)/state.base.xag*100}));
+    state.hist.cl=clHist.map(c=>({ts:c.ts,pct:(c.close-state.base.cl)/state.base.cl*100}));
+
+    $("archiveStatus").innerHTML=
+      "Точка старта: <b>"+formatLocal(targetMs)+"</b> · "+shortName(pairState.a)+"0="+fmt(xagBase.close)+
+      " · "+shortName(pairState.b)+"0="+fmt(clBase.close)+" · часовых точек: "+state.hist.xag.length;
+
+    const d=new Date(targetMs-new Date().getTimezoneOffset()*60000).toISOString();
+    setSelectsFromLocalIso(d);
+
+    renderCharts();
+    updateLiveMetrics();
+    setStatus(state.live.xag!=null&&state.live.cl!=null?"LIVE":"ЖДЁМ LIVE","live");
+  }catch(err){
+    console.error(err);
+    $("archiveStatus").textContent="Ошибка: "+err.message;
+    setStatus("ОШИБКА","bad");
+    alert("Не удалось загрузить точку старта.\n\n"+err.message);
+  }finally{
+    state.loading=false;
+    $("start").disabled=false;
+  }
+}
+
+function shiftStart(deltaHours){
+  if(state.startMs==null)return;
+  loadStartPoint(state.startMs+deltaHours*HOUR);
+}
+
+function onWheel(e){
+  e.preventDefault();
+  const deltaHours=e.deltaY>0?1:-1;
+  shiftStart(deltaHours);
+}
+
+// ---------- websocket live feed ----------
+
+function connect(){
+  if(state.ws){state.ws.onclose=null;try{state.ws.close()}catch(e){}}
+  const ws=new WebSocket("wss://ws.okx.com:8443/ws/v5/public");
+  state.ws=ws;
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({op:"subscribe",args:[
+      {channel:"tickers",instId:pairState.a},
+      {channel:"tickers",instId:pairState.b}
+    ]}));
+  };
+  ws.onmessage=e=>{
+    try{
+      const m=JSON.parse(e.data);
+      if(m.event==="subscribe")return;
+      if(m.data&&m.data[0]){
+        const id=m.data[0].instId,v=Number(m.data[0].last);
+        if(id===pairState.a)state.live.xag=v;
+        if(id===pairState.b)state.live.cl=v;
+        updateLiveMetrics();
+        if(state.live.xag!=null&&state.live.cl!=null&&state.startMs!=null)setStatus("LIVE","live");
+      }
+    }catch(err){}
+  };
+  ws.onerror=()=>setStatus("ПОТОК: ОШИБКА","bad");
+  ws.onclose=()=>{if(state.startMs!=null)setStatus("ПОТОК: ОТКЛЮЧЁН","bad");setTimeout(connect,3000)};
+}
+
+// ---------- date/time dropdown selects ----------
+
+function pad2(n){return String(n).padStart(2,"0")}
+
+function populateDateTimeSelects(){
+  const dSel=$("dSel"),mSel=$("mSel"),ySel=$("ySel"),hSel=$("hSel"),minSel=$("minSel");
+  dSel.innerHTML="";mSel.innerHTML="";ySel.innerHTML="";hSel.innerHTML="";minSel.innerHTML="";
+  for(let i=1;i<=31;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);dSel.appendChild(o)}
+  const months=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  months.forEach((m,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=pad2(i+1)+" ("+m+")";mSel.appendChild(o)});
+  const curY=new Date().getFullYear();
+  for(let y=curY-3;y<=curY;y++){const o=document.createElement("option");o.value=y;o.textContent=y;ySel.appendChild(o)}
+  for(let i=0;i<24;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);hSel.appendChild(o)}
+  for(let i=0;i<60;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);minSel.appendChild(o)}
+}
+
+function setSelectsFromLocalIso(iso){
+  // iso like "2026-08-29T14:05:00.000Z" but already shifted to local wall-clock values
+  const datePart=iso.slice(0,10),timePart=iso.slice(11,16);
+  const [y,m,d]=datePart.split("-").map(Number);
+  const [h,mi]=timePart.split(":").map(Number);
+  $("ySel").value=y;$("mSel").value=m;$("dSel").value=d;
+  $("hSel").value=h;$("minSel").value=mi;
+}
+
+function getTargetMsFromSelects(){
+  const y=Number($("ySel").value),m=Number($("mSel").value),d=Number($("dSel").value);
+  const h=Number($("hSel").value),mi=Number($("minSel").value);
+  return new Date(y,m-1,d,h,mi,0).getTime();
+}
+
+// ---------- navigation ----------
+
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  const pg=$("page-"+id);
+  if(pg)pg.classList.add("active");
+  document.querySelectorAll(".bottomNav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+  if(id==="lab"&&state.startMs!=null){
+    requestAnimationFrame(()=>requestAnimationFrame(renderCharts));
+  }
+}
+document.querySelectorAll(".bottomNav button").forEach(btn=>{
+  btn.onclick=()=>showPage(btn.dataset.page);
+});
+
+// ---------- pair selection page ----------
+
+$("analyzeBtn").onclick=()=>{
+  const a=$("instAInput").value.trim().toUpperCase();
+  const b=$("instBInput").value.trim().toUpperCase();
+  if(!a||!b||!a.includes("-")||!b.includes("-")){alert("Укажите корректные instId, например XAG-USDT-SWAP");return}
+  if(a===b){alert("Инструменты A и B должны отличаться");return}
+  setPair(a,b);
+  showPage("lab");
+};
+
+// ---------- init ----------
+
+$("start").onclick=()=>{
+  const targetMs=getTargetMsFromSelects();
+  if(!Number.isFinite(targetMs)){alert("Неверная дата/время.");return}
+  loadStartPoint(targetMs);
+};
+
+$("perfChart").addEventListener("wheel",onWheel,{passive:false});
+$("spreadChart").addEventListener("wheel",onWheel,{passive:false});
+
+// ---------- synchronized crosshair (one vertical line across both charts) ----------
+
+function hideSyncCrosshair(){
+  $("perfVLine").style.display="none";
+  $("spreadVLine").style.display="none";
+  $("perfCross").style.display="none";
+  $("spreadCross").style.display="none";
+}
+
+function showSyncCrosshairAt(t,mx,originId){
+  if(!settings.crosshair){hideSyncCrosshair();return}
+  [["perfChart","perfVLine"],["spreadChart","spreadVLine"]].forEach(([cId,vId])=>{
+    const c=$(cId),geo=c._geo,vline=$(vId);
+    if(!geo){vline.style.display="none";return}
+    const x=geo.X(t);
+    vline.style.left=x+"px";
+    vline.style.display="block";
+  });
+
+  const xagP=nearestPoint(state.hist.xag,t);
+  const clP=nearestPoint(state.hist.cl,t);
+  let label=formatLocal(t);
+  if(xagP)label+="\n"+shortName(pairState.a)+": "+pctFmt(xagP.v!=null?xagP.v:xagP.pct);
+  if(clP)label+="\n"+shortName(pairState.b)+": "+pctFmt(clP.v!=null?clP.v:clP.pct);
+  if(xagP&&clP){
+    const xv=xagP.v!=null?xagP.v:xagP.pct, cv=clP.v!=null?clP.v:clP.pct;
+    label+="\nSpread: "+pctFmt(xv-cv);
+  }
+
+  const activeId=originId==="spreadChart"?"spreadCross":"perfCross";
+  const otherId=activeId==="perfCross"?"spreadCross":"perfCross";
+  const activeEl=$(activeId),otherEl=$(otherId),originCanvas=$(originId);
+  const rect=originCanvas.getBoundingClientRect();
+  activeEl.textContent=label;
+  activeEl.style.display="block";
+  activeEl.style.left="0px";
+  const tw=activeEl.offsetWidth;
+  let left=mx+10;
+  if(left+tw>rect.width-4)left=Math.max(4,rect.width-tw-4);
+  activeEl.style.left=left+"px";
+  activeEl.style.top="8px";
+  otherEl.style.display="none";
+}
+
+function attachSyncCrosshair(canvas){
+  canvas.addEventListener("mousemove",e=>{
+    const geo=canvas._geo;
+    if(!geo){hideSyncCrosshair();return}
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left;
+    const t=geo.tMin+((mx-geo.ml)/(geo.w-geo.ml-geo.mr))*(geo.tMax-geo.tMin);
+    if(!isFinite(t)){hideSyncCrosshair();return}
+    showSyncCrosshairAt(t,mx,canvas.id);
+  });
+  canvas.addEventListener("mouseleave",hideSyncCrosshair);
+}
+attachSyncCrosshair($("perfChart"));
+attachSyncCrosshair($("spreadChart"));
+
+// ---------- display settings wiring ----------
+
+$("optCrosshair").onchange=e=>{settings.crosshair=e.target.checked;if(!settings.crosshair)hideSyncCrosshair()};
+$("optPoints").onchange=e=>{settings.points=e.target.checked;renderCharts()};
+$("optWaves").onchange=e=>{settings.waves=e.target.checked;renderCharts()};
+$("optLineWidth").oninput=e=>{
+  settings.lineWidth=Number(e.target.value);
+  $("lineWidthVal").textContent=settings.lineWidth;
+  renderCharts();
+};
+$("tmBack24").onclick=()=>shiftStart(-24);
+$("tmBack1").onclick=()=>shiftStart(-1);
+$("tmFwd1").onclick=()=>shiftStart(1);
+$("tmFwd24").onclick=()=>shiftStart(24);
+
+document.querySelectorAll(".tmMini").forEach(btn=>{
+  btn.onclick=()=>shiftStart(Number(btn.dataset.shift));
+});
+
+function updateFsLabels(){
+  const startTxt=state.startMs!=null?formatLocal(state.startMs):"—";
+  const nowTxt=formatLocal(Date.now());
+  const txt="Старт: "+startTxt+" · Сейчас: "+nowTxt;
+  $("perfFsLabel").textContent=txt;
+  $("spreadFsLabel").textContent=txt;
+}
+setInterval(updateFsLabels,1000);
+updateFsLabels();
+
+function toggleFullscreen(panelId,btnId){
+  const panel=$(panelId),btn=$(btnId);
+  const isFull=panel.classList.toggle("fullscreenChart");
+  document.body.classList.toggle("noScroll",isFull);
+  btn.textContent=isFull?"✕":"⛶";
+  btn.title=isFull?"Свернуть":"На весь экран";
+  // give the browser a frame to apply the new layout size before redrawing
+  requestAnimationFrame(()=>requestAnimationFrame(renderCharts));
+}
+$("perfExpand").onclick=()=>toggleFullscreen("perfPanel","perfExpand");
+$("spreadExpand").onclick=()=>toggleFullscreen("spreadPanel","spreadExpand");
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    ["perfPanel","spreadPanel"].forEach((id,i)=>{
+      const panel=$(id);
+      if(panel.classList.contains("fullscreenChart")){
+        toggleFullscreen(id,i===0?"perfExpand":"spreadExpand");
+      }
+    });
+  }
+});
+
+window.addEventListener("resize",()=>{if(state.startMs!=null)renderCharts()});
+
+applyPairLabels();
+const now=new Date();
+const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+populateDateTimeSelects();
+setSelectsFromLocalIso(local.toISOString());
+
+connect();
+</script>
+</body>
+</html>
