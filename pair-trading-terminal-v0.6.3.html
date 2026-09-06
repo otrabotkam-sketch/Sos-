@@ -1,0 +1,1382 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Pair Trading Terminal — v0.6.3</title>
+<style>
+:root{background:#050607;color:#eee;font-family:Inter,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#080a0c,#030405);min-height:100vh}
+.app{max-width:820px;margin:auto;padding:18px;padding-bottom:88px}
+h1{font-size:24px;margin:4px 0 3px}
+.ver{font-size:12px;color:#777;margin-bottom:16px}
+.panel{background:#0c1013;border:1px solid #1b2227;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 10px 35px #0008}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.field{flex:1;min-width:145px}
+.field label{display:block;color:#8d979d;font-size:12px;margin-bottom:7px}
+input{width:100%;background:#11161a;color:#fff;border:1px solid #273037;border-radius:11px;padding:12px;font-size:16px}
+select{background:#11161a;color:#fff;border:1px solid #273037;border-radius:11px;padding:12px 8px;font-size:15px}
+button{background:#161d22;color:#fff;border:1px solid #303a41;border-radius:11px;padding:12px 16px;font-weight:700;cursor:pointer}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.55;cursor:default}
+button.starActive{background:#3a340f;border-color:#8a7a1f;color:#ffd54a}
+.status{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#9ba4a9;margin-bottom:12px;flex-wrap:wrap;gap:6px}
+.live{color:#35ff68;font-weight:800}
+.wait{color:#ffc52b;font-weight:800}
+.bad{color:#ff5353;font-weight:800}
+.note{font-size:12px;color:#777;line-height:1.5}
+.mono{font-family:ui-monospace,monospace}
+.small{font-size:11px;color:#69747a}
+.ok{color:#35ff68}
+.warn{color:#ffc52b}
+.err{color:#ff6464}
+
+.chartHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:10px}
+.chartTitle{font-size:15px;font-weight:800}
+.legend{display:flex;gap:14px;font-size:12px;align-items:center}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.expandBtn{background:#11161a;border:1px solid #273037;color:#cfd6da;border-radius:9px;width:32px;height:32px;font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.expandBtn:active{transform:scale(.94)}
+.chartWrap{position:relative;touch-action:none}
+canvas{width:100%;display:block;border-radius:12px;background:#090c0e}
+
+#perfPanel,#spreadPanel{padding-left:0;padding-right:0}
+#perfPanel .chartHead,#perfPanel .fsLabel,
+#spreadPanel .chartHead,#spreadPanel .fsLabel,#spreadPanel .chartHint{padding:0 16px}
+#candleA,#candleB{height:26vh;max-height:280px;aspect-ratio:auto}
+#spreadChart{height:30vh;max-height:340px;aspect-ratio:auto}
+.panel.fullscreenChart canvas{aspect-ratio:auto;max-height:none}
+
+.miniShift{display:flex;gap:4px;align-items:center}
+.miniShift button.tmMini{padding:3px 6px;font-size:11px;font-weight:600;border-radius:8px}
+
+.instRow{display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid #1b2227;cursor:pointer}
+.instRow:last-child{border-bottom:none}
+.instRow:active{background:#0f1418}
+.instName{font-size:14px;color:#e6e6e6}
+.instCheck{display:flex;align-items:center;padding:4px 8px;cursor:pointer}
+.instCheck input{width:18px;height:18px;accent-color:#35ff68}
+#candleChart{aspect-ratio:16/10;height:auto;max-height:60vh}
+
+.wlCard{display:flex;align-items:center;gap:10px;background:#0c1013;border:1px solid #1b2227;
+  border-radius:14px;padding:10px 12px;margin-bottom:8px;min-height:56px}
+.wlMain{flex:1;min-width:0}
+.wlName{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wlDate{font-size:11px;color:#8d979d;margin-top:2px}
+.wlStats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:70px}
+.wlStats b{font-size:15px}
+.wlStats .small{font-size:10px;color:#8d979d}
+.wlActions{display:flex;flex-direction:column;gap:4px}
+.wlActions button{padding:4px 9px;font-size:12px;border-radius:8px}
+.chartHint{font-size:11px;color:#5c666c;margin-top:6px;text-align:center}
+.fsBar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid #1c2429}
+.fsBar .tmBtns{margin-top:0}
+.fsBar button{padding:7px 10px;font-size:11px}
+.fsLabel{font-size:11px;color:#9aa7ad;white-space:nowrap}
+
+body.noScroll{overflow:hidden}
+.panel.fullscreenChart{position:fixed;inset:0;z-index:1000;margin:0;border-radius:0;
+  display:flex;flex-direction:column;padding:14px;box-shadow:none;border:none}
+.panel.fullscreenChart .chartWrap{flex:1;min-height:0}
+.panel.fullscreenChart canvas{height:100%!important}
+.panel.fullscreenChart .chartHint{flex:none}
+
+.result{text-align:center;padding:14px 8px}
+.result small{color:#7d878d;letter-spacing:.5px}
+.result .big{font-size:50px;font-weight:950;margin:8px 0;text-shadow:0 0 24px currentColor2}
+.result .big.positive{color:#35ff68;text-shadow:0 0 24px #35ff6838}
+.result .big.negative{color:#ff6464;text-shadow:0 0 24px #ff646438}
+.result .big.neutral{color:#ddd}
+
+.miniGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.metric{background:#11161a;border-radius:11px;padding:10px}
+.metric span{display:block;color:#778188;font-size:11px}
+.metric b{font-size:16px}
+.positive{color:#35ff68}
+.negative{color:#ff6464}
+.neutral{color:#ddd}
+
+.crosshair{position:absolute;top:0;left:0;pointer-events:none;font-size:11px;color:#cfd6da;background:#0f1418ee;border:1px solid #263039;border-radius:8px;padding:6px 9px;display:none;white-space:nowrap;z-index:3}
+.vline{position:absolute;top:0;bottom:0;width:1px;background:#4a5560cc;pointer-events:none;display:none;z-index:2}
+.settingsRow{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.settingsRow label{display:flex;align-items:center;gap:7px;font-size:13px;color:#cfd6da;min-width:auto}
+.tmBtns{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.tmBtns button{padding:9px 12px;font-size:13px}
+
+@media(max-width:520px){.miniGrid{grid-template-columns:1fr}}
+
+/* ---------- navigation + pages ---------- */
+.page{display:none}
+.page.active{display:block}
+
+.bottomNav{position:fixed;left:0;right:0;bottom:0;display:flex;background:#0c1013;
+  border-top:1px solid #1b2227;z-index:500;padding:6px 4px calc(6px + env(safe-area-inset-bottom))}
+.bottomNav button{flex:1;background:none;border:none;color:#7d878d;display:flex;
+  flex-direction:column;align-items:center;gap:2px;font-size:10px;padding:6px 2px;
+  border-radius:10px;font-weight:600}
+.bottomNav button .ic{font-size:18px;line-height:1}
+.bottomNav button.active{color:#35ff68;background:#11161a}
+
+@media(min-width:900px){
+  body{display:flex}
+  .bottomNav{position:fixed;left:0;top:0;bottom:0;right:auto;width:84px;
+    flex-direction:column;border-top:none;border-right:1px solid #1b2227;padding:14px 4px;gap:2px}
+  .app{margin-left:84px;padding-bottom:18px;max-width:900px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ================= SCANNER ================= -->
+<div id="page-scanner" class="page">
+  <h1>Scanner</h1>
+  <div class="ver">Автоматический поиск и рейтинг пар</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">
+      Scanner будет перебирать инструменты OKX SWAP и товарные perpetual-контракты, формировать пары
+      и находить стартовые точки с наиболее повторяемым циклом конвергенция → дивергенция → конвергенция.
+      Для каждой пары — Current/Average/Max Spread, количество волн, рейтинг A+…D и Distance To Signal.
+    </div>
+  </div>
+  <div class="panel">
+    <div class="note">Пока Scanner не готов, пару можно выбрать вручную на вкладке «Пара».</div>
+  </div>
+</div>
+
+<!-- ================= WATCHLIST ================= -->
+<div id="page-watchlist" class="page">
+  <h1>Watchlist</h1>
+  <div class="ver">Сохранённые пары (до 10) · расхождение и амплитуды считаются от точки старта каждой пары</div>
+  <div class="panel">
+    <button id="wlRefresh" style="width:100%">🔄 Обновить показатели</button>
+  </div>
+  <div id="wlList"></div>
+</div>
+
+<!-- ================= PAIR SELECTION ================= -->
+<div id="page-select" class="page">
+  <h1>Выбор пары</h1>
+  <div class="ver">Тапните инструмент — откроется график, он станет А (Long). Галочка у другого — станет Б (Short), откроется пара</div>
+
+  <div class="panel" id="instPreviewPanel" style="display:none">
+    <div class="chartHead">
+      <div class="chartTitle" id="previewTitle">—</div>
+      <div class="legend">
+        <select id="tfSel">
+          <option value="1m">1м</option>
+          <option value="5m">5м</option>
+          <option value="15m">15м</option>
+          <option value="1H" selected>1ч</option>
+          <option value="4H">4ч</option>
+          <option value="1D">1д</option>
+        </select>
+      </div>
+    </div>
+    <div class="chartWrap">
+      <canvas id="candleChart"></canvas>
+      <div id="candleCross" class="crosshair"></div>
+    </div>
+    <div class="note" id="previewSub" style="margin-top:8px">Инструмент А (Long): —</div>
+  </div>
+
+  <div class="panel">
+    <input id="instSearch" placeholder="Поиск, например BTC, XAU, CL" style="text-transform:uppercase">
+    <div id="instList" style="margin-top:10px;max-height:50vh;overflow:auto"></div>
+    <div class="note" id="instListStatus" style="margin-top:8px">Загружаю список инструментов…</div>
+  </div>
+</div>
+
+<!-- ================= PAIR LAB ================= -->
+<div id="page-lab" class="page active">
+<h1>Pair Trading Terminal</h1>
+<div class="ver">v0.6.3 · Pair Lab — математика и графики v0.5.1 без изменений, пара выбирается на вкладке «Пара»</div>
+
+<div class="panel">
+  <div class="status">
+    <span id="pairStatusLabel">Пара: <b>XAG-USDT-SWAP</b> / <b>CL-USDT-SWAP</b> · Источник: <b>OKX</b></span>
+    <span id="status" class="wait">● ОЖИДАНИЕ</span>
+  </div>
+  <div class="row">
+    <div class="field"><label>Дата точки старта</label>
+      <div style="display:flex;gap:6px">
+        <select id="dSel"></select>
+        <select id="mSel"></select>
+        <select id="ySel"></select>
+      </div>
+    </div>
+    <div class="field"><label>Время точки старта</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="hSel"></select>
+        <span>:</span>
+        <select id="minSel"></select>
+      </div>
+    </div>
+    <button id="start">Загрузить точку старта</button>
+  </div>
+  <div id="archiveStatus" class="note" style="margin-top:10px">
+    Точка старта пока не загружена.
+  </div>
+  <button id="addToWatchlistBtn" style="width:100%;margin-top:10px">★ В избранное</button>
+</div>
+
+<div class="panel" id="perfPanel">
+  <div class="chartHead">
+    <div class="legend">
+      <span><i class="dot" style="background:#35ff68"></i><span id="legA">XAG</span></span>
+      <span><i class="dot" style="background:#ffb648"></i><span id="legB">CL</span></span>
+    </div>
+    <div class="legend">
+      <select id="labTfSel">
+        <option value="1m">1м</option>
+        <option value="5m">5м</option>
+        <option value="15m">15м</option>
+        <option value="1H" selected>1ч</option>
+        <option value="4H">4ч</option>
+        <option value="1D">1д</option>
+      </select>
+      <button class="expandBtn" id="perfExpand" title="На весь экран">⛶</button>
+    </div>
+  </div>
+  <div class="fsLabel" id="perfFsLabel" style="display:none">Старт: — · Сейчас: —</div>
+  <div class="chartWrap">
+    <canvas id="candleA"></canvas>
+    <div id="candleACross" class="crosshair"></div>
+  </div>
+  <div class="chartWrap" style="margin-top:8px">
+    <canvas id="candleB"></canvas>
+    <div id="candleBCross" class="crosshair"></div>
+  </div>
+</div>
+
+<div class="panel" id="spreadPanel">
+  <div class="chartHead">
+    <div class="miniShift">
+      <button class="tmMini" data-shift="-24">◀◀24ч</button>
+      <button class="tmMini" data-shift="-1">◀1ч</button>
+      <button class="tmMini" data-shift="1">1ч▶</button>
+      <button class="tmMini" data-shift="24">24ч▶▶</button>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:#35ff68"></i><span id="spreadLegPos">XAG% − CL% &gt; 0</span></span>
+      <span><i class="dot" style="background:#ff6464"></i><span id="spreadLegNeg">&lt; 0</span></span>
+      <button class="expandBtn" id="spreadExpand" title="На весь экран">⛶</button>
+    </div>
+  </div>
+  <div class="fsLabel" id="spreadFsLabel" style="display:none">Старт: — · Сейчас: —</div>
+  <div class="chartWrap">
+    <canvas id="spreadChart" height="150"></canvas>
+    <div id="spreadVLine" class="vline"></div>
+    <div id="spreadCross" class="crosshair"></div>
+  </div>
+  <div class="chartHint">Колесо мыши над графиком — сдвиг точки старта на ±1 час</div>
+</div>
+
+
+<div class="panel">
+  <div class="chartTitle">Wave Analyzer</div>
+  <div class="miniGrid">
+    <div class="metric"><span>Волн найдено</span><b id="waveCount">—</b></div>
+    <div class="metric"><span>Средняя амплитуда</span><b id="waveAvgAmp">—</b></div>
+    <div class="metric"><span>Максимальная амплитуда</span><b id="waveMaxAmp">—</b></div>
+    <div class="metric"><span>Среднее время возврата</span><b id="waveAvgTime">—</b></div>
+    <div class="metric"><span>Возвратов к нулю</span><b id="waveReturnPct">—</b></div>
+    <div class="metric"><span>Рейтинг пары</span><b id="waveGrade">—</b></div>
+  </div>
+</div>
+
+
+<div class="panel result">
+  <small id="distLabel">РАСХОЖДЕНИЕ СЕЙЧАС (XAG% − CL%)</small>
+  <div id="dist" class="big neutral">—</div>
+  <div id="formula" class="note mono">Сначала загрузите точку старта</div>
+</div>
+
+<div class="panel">
+  <div class="miniGrid">
+    <div class="metric"><span id="labelXagLive">XAG live / база</span><b id="xagLive">—</b></div>
+    <div class="metric"><span id="labelClLive">CL live / база</span><b id="clLive">—</b></div>
+    <div class="metric"><span id="labelXagPct">XAG %</span><b id="xagPct" class="neutral">—</b></div>
+    <div class="metric"><span id="labelClPct">CL %</span><b id="clPct" class="neutral">—</b></div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="note">
+    Точка старта берётся из закрытия 1‑минутной свечи OKX (history‑candles). История для графиков — часовые (1H) свечи
+    от точки старта до текущего момента; текущая цена дополняется live‑потоком (WebSocket ticker). Прокрутка колеса
+    над любым графиком сдвигает точку старта на 1 час вперёд/назад и полностью пересчитывает оба графика.
+  </div>
+</div>
+
+<div class="panel" id="displaySettings">
+  <div class="chartTitle" style="margin-bottom:10px">Отображение</div>
+  <div class="settingsRow">
+    <label><input type="checkbox" id="optCrosshair" checked> Перекрестие</label>
+    <label><input type="checkbox" id="optPoints" checked> Точки на графике</label>
+    <label><input type="checkbox" id="optWaves" checked> Волны на графике</label>
+    <label>Толщина линий: <span id="lineWidthVal">2</span>px
+      <input type="range" id="optLineWidth" min="1" max="5" value="2" style="width:100px">
+    </label>
+  </div>
+</div>
+</div>
+<!-- ============== /PAIR LAB ============== -->
+
+<!-- ================= ALERTS ================= -->
+<div id="page-alerts" class="page">
+  <h1>Alerts</h1>
+  <div class="ver">Оповещения по условиям входа/выхода</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">
+      Здесь можно будет задать Entry/Exit уровни и условия закрытия по выбранной паре. Оповещения,
+      работающие независимо от открытого приложения, потребуют серверной части — это отдельный этап
+      после базового Scanner.
+    </div>
+  </div>
+</div>
+
+<!-- ================= ACCOUNT ================= -->
+<div id="page-account" class="page">
+  <h1>Account</h1>
+  <div class="ver">Страница аккаунта</div>
+  <div class="panel">
+    <div class="chartTitle" style="margin-bottom:10px">В разработке</div>
+    <div class="note">Подписка, лимиты Watchlist и настройки профиля появятся здесь позже.</div>
+  </div>
+</div>
+
+</div>
+
+<nav class="bottomNav" id="bottomNav">
+  <button data-page="scanner"><span class="ic">📡</span><span>Scanner</span></button>
+  <button data-page="watchlist"><span class="ic">⭐</span><span>Watchlist</span></button>
+  <button data-page="select"><span class="ic">🔀</span><span>Пара</span></button>
+  <button data-page="lab" class="active"><span class="ic">📊</span><span>Pair Lab</span></button>
+  <button data-page="alerts"><span class="ic">🔔</span><span>Alerts</span></button>
+  <button data-page="account"><span class="ic">👤</span><span>Account</span></button>
+</nav>
+
+<script>
+const HOUR=3600000;
+const MAX_PAGES=20; // up to ~6 months of 1H candles
+
+const pairState={a:"XAG-USDT-SWAP",b:"CL-USDT-SWAP"};
+
+const state={
+  startMs:null,
+  base:{xag:null,cl:null},
+  live:{xag:null,cl:null},
+  hist:{xag:[],cl:[]}, // [{ts,pct}]
+  waves:[],
+  ws:null,
+  loading:false
+};
+
+const settings={
+  crosshair:true,
+  points:true,
+  waves:true,
+  lineWidth:2
+};
+
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:8});
+const pctFmt=n=>(n>=0?"+":"")+n.toFixed(2)+"%";
+const shortName=instId=>(instId.split("-")[0]||instId);
+
+function setStatus(t,c){$("status").textContent="● "+t;$("status").className=c}
+function formatLocal(ts){return new Date(ts).toLocaleString("ru-RU",{hour12:false})}
+
+function paintMetric(el,v){
+  el.textContent=pctFmt(v);
+  el.className=v>0?"positive":v<0?"negative":"neutral";
+}
+
+// ---------- pair labels ----------
+
+function applyPairLabels(){
+  const a=shortName(pairState.a),b=shortName(pairState.b);
+  $("pairStatusLabel").innerHTML="Пара: <b>"+pairState.a+"</b> / <b>"+pairState.b+"</b> · Источник: <b>OKX</b>";
+  $("legA").textContent=a;
+  $("legB").textContent=b;
+  $("spreadLegPos").textContent=a+"% − "+b+"% > 0";
+  $("distLabel").textContent="РАСХОЖДЕНИЕ СЕЙЧАС ("+a+"% − "+b+"%)";
+  $("labelXagLive").textContent=a+" live / база";
+  $("labelClLive").textContent=b+" live / база";
+  $("labelXagPct").textContent=a+" %";
+  $("labelClPct").textContent=b+" %";
+}
+
+const LS_SESSION="ptt_session_v1";
+const LS_WATCHLIST="ptt_watchlist_v1";
+
+function saveSession(){
+  try{localStorage.setItem(LS_SESSION,JSON.stringify({a:pairState.a,b:pairState.b,startMs:state.startMs}))}catch(e){}
+}
+function loadSession(){
+  try{const raw=localStorage.getItem(LS_SESSION);return raw?JSON.parse(raw):null}catch(e){return null}
+}
+function getWatchlist(){
+  try{return JSON.parse(localStorage.getItem(LS_WATCHLIST)||"[]")}catch(e){return[]}
+}
+function setWatchlist(list){
+  try{localStorage.setItem(LS_WATCHLIST,JSON.stringify(list))}catch(e){}
+}
+
+function setPair(a,b,skipAutoLoad){
+  pairState.a=a;pairState.b=b;
+  state.startMs=null;
+  state.base={xag:null,cl:null};
+  state.live={xag:null,cl:null};
+  state.hist={xag:[],cl:[]};
+  state.waves=[];
+  applyPairLabels();
+  $("archiveStatus").textContent="Точка старта пока не загружена.";
+  $("dist").textContent="—";$("dist").className="big neutral";
+  $("formula").textContent="Сначала загрузите точку старта";
+  ["waveCount","waveAvgAmp","waveMaxAmp","waveAvgTime","waveReturnPct","waveGrade"].forEach(id=>$(id).textContent="—");
+  $("xagLive").textContent="—";$("clLive").textContent="—";
+  $("xagPct").textContent="—";$("xagPct").className="neutral";
+  $("clPct").textContent="—";$("clPct").className="neutral";
+  setStatus("ОЖИДАНИЕ","wait");
+  connect();
+  saveSession();
+  updateWatchlistButton();
+  loadLabCandles();
+  if(!skipAutoLoad){
+    const targetMs=getTargetMsFromSelects();
+    if(Number.isFinite(targetMs)&&targetMs<=Date.now())loadStartPoint(targetMs);
+  }
+}
+
+// ---------- OKX fetch helpers ----------
+
+async function getMinuteClose(instId,targetMs){
+  const url="https://www.okx.com/api/v5/market/history-candles?instId="+encodeURIComponent(instId)+
+            "&bar=1m&after="+encodeURIComponent(String(targetMs+60000))+"&limit=10";
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error(instId+": HTTP "+r.status);
+  const j=await r.json();
+  if(j.code!=="0")throw new Error(instId+": OKX code "+j.code+" "+(j.msg||""));
+  const target=Number(targetMs);
+  const rows=(j.data||[]).map(x=>({ts:Number(x[0]),close:Number(x[4])}));
+  const exact=rows.find(x=>x.ts===target);
+  if(!exact){
+    const nearby=rows.sort((a,b)=>Math.abs(a.ts-target)-Math.abs(b.ts-target))[0];
+    throw new Error(instId+": точной 1m свечи нет. Ближайшая "+(nearby?formatLocal(nearby.ts):"не найдена"));
+  }
+  return exact;
+}
+
+async function getHourlyCandles(instId,fromMs,toMs){
+  let cursor=toMs+HOUR;
+  const all=[];
+  for(let page=0;page<MAX_PAGES;page++){
+    const url="https://www.okx.com/api/v5/market/history-candles?instId="+encodeURIComponent(instId)+
+              "&bar=1H&after="+encodeURIComponent(String(cursor))+"&limit=300";
+    const r=await fetch(url,{cache:"no-store"});
+    if(!r.ok)throw new Error(instId+": HTTP "+r.status);
+    const j=await r.json();
+    if(j.code!=="0")throw new Error(instId+": OKX code "+j.code+" "+(j.msg||""));
+    const rows=(j.data||[]).map(x=>({ts:Number(x[0]),close:Number(x[4])}));
+    if(rows.length===0)break;
+    all.push(...rows);
+    const earliest=rows[rows.length-1].ts;
+    if(earliest<=fromMs)break;
+    cursor=earliest;
+  }
+  return all.filter(x=>x.ts>=fromMs&&x.ts<=toMs).sort((a,b)=>a.ts-b.ts);
+}
+
+// ---------- canvas line chart ----------
+
+function drawChart(canvas,series,opts){
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth,h=canvas.clientHeight||canvas.height;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  const allVals=series.flatMap(s=>s.points.map(p=>p.v));
+  if(allVals.length===0){
+    ctx.fillStyle="#5c666c";ctx.font="12px Inter,Arial";ctx.textAlign="center";
+    ctx.fillText("Нет данных — загрузите точку старта",w/2,h/2);
+    return null;
+  }
+  let vMin=Math.min(...allVals,0),vMax=Math.max(...allVals,0);
+  if(vMin===vMax){vMin-=1;vMax+=1}
+  const pad=(vMax-vMin)*0.12;vMin-=pad;vMax+=pad;
+
+  const tMin=Math.min(...series.flatMap(s=>s.points.map(p=>p.t)));
+  const tMax=Math.max(...series.flatMap(s=>s.points.map(p=>p.t)));
+  const tSpan=Math.max(tMax-tMin,1);
+
+  const ml=8,mr=52,mt=10,mb=18;
+  const iw=w-ml-mr,ih=h-mt-mb;
+  const X=t=>ml+((t-tMin)/tSpan)*iw;
+  const Y=v=>mt+(1-(v-vMin)/(vMax-vMin))*ih;
+
+  // grid
+  ctx.strokeStyle="#1a2227";ctx.lineWidth=1;
+  const gridN=4;
+  ctx.fillStyle="#5c666c";ctx.font="10px Inter,Arial";ctx.textAlign="left";
+  for(let i=0;i<=gridN;i++){
+    const v=vMin+(vMax-vMin)*i/gridN;
+    const y=Y(v);
+    ctx.beginPath();ctx.moveTo(ml,y+0.5);ctx.lineTo(w-mr,y+0.5);ctx.stroke();
+    ctx.fillText(v.toFixed(1)+"%",w-mr+6,y+3);
+  }
+  // zero line emphasized
+  if(vMin<0&&vMax>0){
+    ctx.strokeStyle="#3a4650";ctx.lineWidth=1.3;
+    const y=Y(0);
+    ctx.beginPath();ctx.moveTo(ml,y+0.5);ctx.lineTo(w-mr,y+0.5);ctx.stroke();
+  }
+
+  // fill for single-series spread chart
+  if(opts&&opts.fillZero&&series.length===1){
+    const pts=series[0].points;
+    ctx.beginPath();
+    pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.lineTo(X(pts[pts.length-1].t),Y(0));
+    ctx.lineTo(X(pts[0].t),Y(0));
+    ctx.closePath();
+    ctx.fillStyle="#35ff6812";
+    ctx.fill();
+  }
+
+  series.forEach(s=>{
+    const pts=s.points;
+    if(pts.length===0)return;
+    ctx.lineWidth=(opts&&opts.lineWidth)||2;
+    ctx.strokeStyle=s.color;
+    ctx.beginPath();
+    pts.forEach((p,i)=>{const x=X(p.t),y=Y(p.v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});
+    ctx.stroke();
+
+    // per-point dots (skip if too dense, keep chart readable)
+    if(opts&&opts.showPoints&&pts.length<=400){
+      ctx.fillStyle=s.color;
+      pts.forEach(p=>{ctx.beginPath();ctx.arc(X(p.t),Y(p.v),2,0,Math.PI*2);ctx.fill()});
+    }else{
+      const last=pts[pts.length-1];
+      ctx.fillStyle=s.color;
+      ctx.beginPath();ctx.arc(X(last.t),Y(last.v),3.2,0,Math.PI*2);ctx.fill();
+    }
+  });
+
+  return {X,Y,vMin,vMax,tMin,tMax,ml,mr,mt,mb,w,h};
+}
+
+function nearestPoint(arr,t){
+  if(!arr||!arr.length)return null;
+  let best=arr[0];
+  for(const p of arr){if(Math.abs(p.ts-t)<Math.abs(best.ts-t))best=p}
+  return best;
+}
+
+function drawWaveMarkers(canvas,geo,waves){
+  if(!geo||!waves||!waves.length)return;
+  const ctx=canvas.getContext("2d");
+  waves.forEach(w=>{
+    if(w.startTs>=geo.tMin&&w.startTs<=geo.tMax){
+      const x=geo.X(w.startTs);
+      ctx.save();
+      ctx.strokeStyle="#5c666c";ctx.setLineDash([3,3]);ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,geo.mt);ctx.lineTo(x,geo.h-geo.mb);ctx.stroke();
+      ctx.restore();
+    }
+    if(w.peakTs!=null&&w.peakTs>=geo.tMin&&w.peakTs<=geo.tMax){
+      const x=geo.X(w.peakTs),y=geo.Y(w.peakVal);
+      ctx.fillStyle=w.peakVal>=0?"#35ff68":"#ff6464";
+      ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle="#0a0d0f";ctx.lineWidth=1.2;ctx.stroke();
+    }
+    if(w.endTs!=null&&w.endTs>=geo.tMin&&w.endTs<=geo.tMax){
+      const x=geo.X(w.endTs);
+      ctx.save();
+      ctx.strokeStyle="#7c8ea8";ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(x,geo.mt);ctx.lineTo(x,geo.h-geo.mb);ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+function renderCharts(){
+  const spreadCanvas=$("spreadChart");
+  const drawOpts={lineWidth:settings.lineWidth,showPoints:settings.points};
+
+  analyzeWaves(); // populates state.waves + wave metric text, ahead of spread chart draw
+
+  const n=Math.min(state.hist.xag.length,state.hist.cl.length);
+  const spreadPts=[];
+  for(let i=0;i<n;i++){
+    spreadPts.push({t:state.hist.xag[i].ts,v:state.hist.xag[i].pct-state.hist.cl[i].pct});
+  }
+  const lastSpread=spreadPts.length?spreadPts[spreadPts.length-1].v:0;
+  const spreadSeries=[{name:"Spread",color:lastSpread>=0?"#35ff68":"#ff6464",points:spreadPts}];
+  const geo2=drawChart(spreadCanvas,spreadSeries,{...drawOpts,fillZero:true});
+  spreadCanvas._geo=geo2;
+  if(settings.waves)drawWaveMarkers(spreadCanvas,geo2,state.waves);
+}
+
+function renderLabCharts(){
+  renderCharts();
+  if(labCandlesA.length)drawCandleChart($("candleA"),labCandlesA);
+  if(labCandlesB.length)drawCandleChart($("candleB"),labCandlesB);
+}
+
+
+
+function computeWaveStats(histA,histB){
+  const n=Math.min(histA.length,histB.length);
+  const empty={waves:[],avgAmp:0,maxAmp:0,avgTime:0,returnPct:0,grade:"—"};
+  if(n<10)return empty;
+
+  const spread=[];
+  for(let i=0;i<n;i++){
+    spread.push({ts:histA[i].ts,value:histA[i].pct-histB[i].pct});
+  }
+
+  const waves=[];
+  let current=null;
+
+  for(let i=1;i<spread.length;i++){
+    const prev=spread[i-1].value;
+    const cur=spread[i].value;
+
+    if(current===null){
+      if(Math.abs(cur)>2){
+        current={startTs:spread[i].ts,maxAbs:Math.abs(cur),peakTs:spread[i].ts,peakVal:cur};
+      }
+    }else{
+      if(Math.abs(cur)>current.maxAbs){
+        current.maxAbs=Math.abs(cur);
+        current.peakTs=spread[i].ts;
+        current.peakVal=cur;
+      }
+      if((prev>0&&cur<=0)||(prev<0&&cur>=0)){
+        current.endTs=spread[i].ts;
+        current.duration=current.endTs-current.startTs;
+        waves.push(current);
+        current=null;
+      }
+    }
+  }
+
+  if(!waves.length)return empty;
+
+  const avgAmp=waves.reduce((s,w)=>s+w.maxAbs,0)/waves.length;
+  const maxAmp=Math.max(...waves.map(w=>w.maxAbs));
+  const avgTime=waves.reduce((s,w)=>s+w.duration,0)/waves.length;
+  const returnPct=waves.length/Math.max(spread.length/24,1);
+
+  let grade="C";
+  if(avgAmp>8&&returnPct>0.7)grade="A";
+  else if(avgAmp>5&&returnPct>0.5)grade="B";
+
+  return {waves,avgAmp,maxAmp,avgTime,returnPct,grade};
+}
+
+function analyzeWaves(){
+  const stats=computeWaveStats(state.hist.xag,state.hist.cl);
+  state.waves=stats.waves;
+  if(!stats.waves.length)return;
+
+  document.getElementById("waveCount").textContent=stats.waves.length;
+  document.getElementById("waveAvgAmp").textContent=stats.avgAmp.toFixed(2)+"%";
+  document.getElementById("waveMaxAmp").textContent=stats.maxAmp.toFixed(2)+"%";
+  document.getElementById("waveAvgTime").textContent=(stats.avgTime/3600000).toFixed(1)+" ч";
+  document.getElementById("waveReturnPct").textContent=(stats.returnPct*100).toFixed(0)+"%";
+  document.getElementById("waveGrade").textContent=stats.grade;
+}
+
+
+// ---------- live price handling ----------
+
+function updateLiveMetrics(){
+  const a=state.live.xag,b=state.live.cl;
+  if(state.base.xag!=null){
+    $("xagLive").textContent=(a!=null?fmt(a):"—")+" / "+fmt(state.base.xag);
+    if(a!=null)paintMetric($("xagPct"),(a-state.base.xag)/state.base.xag*100);
+  }
+  if(state.base.cl!=null){
+    $("clLive").textContent=(b!=null?fmt(b):"—")+" / "+fmt(state.base.cl);
+    if(b!=null)paintMetric($("clPct"),(b-state.base.cl)/state.base.cl*100);
+  }
+  // append/replace the trailing live point onto the hourly history so the chart reaches "now"
+  if(state.base.xag!=null&&state.base.cl!=null&&a!=null&&b!=null&&state.hist.xag.length){
+    const nowTs=Date.now();
+    const xagPct=(a-state.base.xag)/state.base.xag*100;
+    const clPct=(b-state.base.cl)/state.base.cl*100;
+    const lastX=state.hist.xag[state.hist.xag.length-1];
+    const lastC=state.hist.cl[state.hist.cl.length-1];
+    const point={ts:nowTs,pct:xagPct};
+    const pointC={ts:nowTs,pct:clPct};
+    if(lastX&&nowTs-lastX.ts<HOUR*2){state.hist.xag[state.hist.xag.length-1]=point}
+    else{state.hist.xag.push(point)}
+    if(lastC&&nowTs-lastC.ts<HOUR*2){state.hist.cl[state.hist.cl.length-1]=pointC}
+    else{state.hist.cl.push(pointC)}
+    renderCharts();
+
+    const d=xagPct-clPct;
+    const distEl=$("dist");
+    distEl.textContent=pctFmt(d);
+    distEl.className="big "+(d>0?"positive":d<0?"negative":"neutral");
+    $("formula").textContent=pctFmt(xagPct)+" − ("+pctFmt(clPct)+") = "+pctFmt(d);
+  }
+}
+
+// ---------- start point loading ----------
+
+async function loadStartPoint(targetMs){
+  if(state.loading)return;
+  if(targetMs>Date.now()){alert("Точка старта не может быть в будущем.");return}
+  state.loading=true;
+  $("start").disabled=true;
+  $("archiveStatus").textContent="Загружаю точку старта и часовую историю…";
+  setStatus("ЗАГРУЗКА","wait");
+  try{
+    const [xagBase,clBase]=await Promise.all([
+      getMinuteClose(pairState.a,targetMs),
+      getMinuteClose(pairState.b,targetMs)
+    ]);
+    state.startMs=targetMs;
+    state.base={xag:xagBase.close,cl:clBase.close};
+
+    const nowMs=Date.now();
+    const [xagHist,clHist]=await Promise.all([
+      getHourlyCandles(pairState.a,targetMs,nowMs),
+      getHourlyCandles(pairState.b,targetMs,nowMs)
+    ]);
+    state.hist.xag=xagHist.map(c=>({ts:c.ts,pct:(c.close-state.base.xag)/state.base.xag*100}));
+    state.hist.cl=clHist.map(c=>({ts:c.ts,pct:(c.close-state.base.cl)/state.base.cl*100}));
+
+    $("archiveStatus").innerHTML=
+      "Точка старта: <b>"+formatLocal(targetMs)+"</b> · "+shortName(pairState.a)+"0="+fmt(xagBase.close)+
+      " · "+shortName(pairState.b)+"0="+fmt(clBase.close)+" · часовых точек: "+state.hist.xag.length;
+
+    const d=new Date(targetMs-new Date().getTimezoneOffset()*60000).toISOString();
+    setSelectsFromLocalIso(d);
+
+    renderCharts();
+    updateLiveMetrics();
+    setStatus(state.live.xag!=null&&state.live.cl!=null?"LIVE":"ЖДЁМ LIVE","live");
+    saveSession();
+    updateWatchlistButton();
+  }catch(err){
+    console.error(err);
+    $("archiveStatus").textContent="Ошибка: "+err.message;
+    setStatus("ОШИБКА","bad");
+    alert("Не удалось загрузить точку старта.\n\n"+err.message);
+  }finally{
+    state.loading=false;
+    $("start").disabled=false;
+  }
+}
+
+function shiftStart(deltaHours){
+  if(state.startMs==null)return;
+  loadStartPoint(state.startMs+deltaHours*HOUR);
+}
+
+function onWheel(e){
+  e.preventDefault();
+  const deltaHours=e.deltaY>0?1:-1;
+  shiftStart(deltaHours);
+}
+
+// ---------- websocket live feed ----------
+
+function connect(){
+  if(state.ws){state.ws.onclose=null;try{state.ws.close()}catch(e){}}
+  const ws=new WebSocket("wss://ws.okx.com:8443/ws/v5/public");
+  state.ws=ws;
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({op:"subscribe",args:[
+      {channel:"tickers",instId:pairState.a},
+      {channel:"tickers",instId:pairState.b}
+    ]}));
+  };
+  ws.onmessage=e=>{
+    try{
+      const m=JSON.parse(e.data);
+      if(m.event==="subscribe")return;
+      if(m.data&&m.data[0]){
+        const id=m.data[0].instId,v=Number(m.data[0].last);
+        if(id===pairState.a)state.live.xag=v;
+        if(id===pairState.b)state.live.cl=v;
+        updateLiveMetrics();
+        if(state.live.xag!=null&&state.live.cl!=null&&state.startMs!=null)setStatus("LIVE","live");
+      }
+    }catch(err){}
+  };
+  ws.onerror=()=>setStatus("ПОТОК: ОШИБКА","bad");
+  ws.onclose=()=>{if(state.startMs!=null)setStatus("ПОТОК: ОТКЛЮЧЁН","bad");setTimeout(connect,3000)};
+}
+
+// ---------- date/time dropdown selects ----------
+
+function pad2(n){return String(n).padStart(2,"0")}
+
+function populateDateTimeSelects(){
+  const dSel=$("dSel"),mSel=$("mSel"),ySel=$("ySel"),hSel=$("hSel"),minSel=$("minSel");
+  dSel.innerHTML="";mSel.innerHTML="";ySel.innerHTML="";hSel.innerHTML="";minSel.innerHTML="";
+  for(let i=1;i<=31;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);dSel.appendChild(o)}
+  const months=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+  months.forEach((m,i)=>{const o=document.createElement("option");o.value=i+1;o.textContent=pad2(i+1)+" ("+m+")";mSel.appendChild(o)});
+  const curY=new Date().getFullYear();
+  for(let y=curY-3;y<=curY;y++){const o=document.createElement("option");o.value=y;o.textContent=y;ySel.appendChild(o)}
+  for(let i=0;i<24;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);hSel.appendChild(o)}
+  for(let i=0;i<60;i++){const o=document.createElement("option");o.value=i;o.textContent=pad2(i);minSel.appendChild(o)}
+}
+
+function setSelectsFromLocalIso(iso){
+  // iso like "2026-08-29T14:05:00.000Z" but already shifted to local wall-clock values
+  const datePart=iso.slice(0,10),timePart=iso.slice(11,16);
+  const [y,m,d]=datePart.split("-").map(Number);
+  const [h,mi]=timePart.split(":").map(Number);
+  $("ySel").value=y;$("mSel").value=m;$("dSel").value=d;
+  $("hSel").value=h;$("minSel").value=mi;
+}
+
+function getTargetMsFromSelects(){
+  const y=Number($("ySel").value),m=Number($("mSel").value),d=Number($("dSel").value);
+  const h=Number($("hSel").value),mi=Number($("minSel").value);
+  return new Date(y,m-1,d,h,mi,0).getTime();
+}
+
+// ---------- navigation ----------
+
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  const pg=$("page-"+id);
+  if(pg)pg.classList.add("active");
+  document.querySelectorAll(".bottomNav button").forEach(b=>b.classList.toggle("active",b.dataset.page===id));
+  if(id==="lab"){
+    requestAnimationFrame(()=>requestAnimationFrame(renderLabCharts));
+  }
+  if(id==="select"&&candidateA&&previewCandles.length){
+    requestAnimationFrame(()=>requestAnimationFrame(()=>drawCandleChart(previewCandles)));
+  }
+  if(id==="watchlist"){
+    renderWatchlist();
+  }
+}
+document.querySelectorAll(".bottomNav button").forEach(btn=>{
+  btn.onclick=()=>showPage(btn.dataset.page);
+});
+
+// ---------- pair selection page: instrument list + candlestick preview ----------
+
+let allInstruments=[];
+let candidateA=null;
+let previewCandles=[];
+
+async function loadInstrumentList(){
+  $("instListStatus").textContent="Загружаю список инструментов…";
+  try{
+    const r=await fetch("https://www.okx.com/api/v5/public/instruments?instType=SWAP",{cache:"no-store"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    if(j.code!=="0")throw new Error("OKX code "+j.code+" "+(j.msg||""));
+    allInstruments=(j.data||[])
+      .filter(x=>x.state==="live")
+      .map(x=>x.instId)
+      .sort();
+    $("instListStatus").textContent="Инструментов: "+allInstruments.length;
+    renderInstList();
+  }catch(err){
+    console.error(err);
+    $("instListStatus").textContent="Ошибка загрузки списка: "+err.message+
+      ". Если страница открыта не по https-ссылке (например, прямо из файла на телефоне), запросы к OKX блокируются браузером — загрузите файл на Netlify Drop/GitHub Pages и откройте по ссылке.";
+  }
+}
+
+function renderInstList(){
+  const q=$("instSearch").value.trim().toUpperCase();
+  const filtered=q?allInstruments.filter(id=>id.includes(q)):allInstruments;
+  const rowsHtml=filtered.slice(0,300).map(id=>
+    '<div class="instRow" data-inst="'+id+'">'+
+      '<span class="instName">'+id+'</span>'+
+      '<label class="instCheck"><input type="checkbox" data-inst="'+id+'"></label>'+
+    '</div>'
+  ).join("");
+  $("instList").innerHTML=rowsHtml||'<div class="note">Ничего не найдено</div>';
+}
+
+$("instSearch").addEventListener("input",renderInstList);
+
+function onSelectInstrumentA(instId){
+  candidateA=instId;
+  $("instPreviewPanel").style.display="block";
+  $("previewTitle").textContent=instId;
+  $("previewSub").textContent="Инструмент А (Long): "+instId;
+  loadCandles(instId,$("tfSel").value);
+  $("instSearch").value="";
+  renderInstList();
+}
+
+function onCheckInstrumentB(instId,checkboxEl){
+  if(!candidateA){
+    checkboxEl.checked=false;
+    alert("Сначала выберите инструмент А — нажмите на его название в списке.");
+    return;
+  }
+  if(instId===candidateA){
+    checkboxEl.checked=false;
+    alert("Инструмент Б должен отличаться от инструмента А.");
+    return;
+  }
+  document.querySelectorAll('#instList input[type=checkbox]').forEach(cb=>{if(cb!==checkboxEl)cb.checked=false});
+  setPair(candidateA,instId);
+  showPage("lab");
+}
+
+$("instList").addEventListener("change",e=>{
+  if(e.target.matches('input[type=checkbox]')){
+    onCheckInstrumentB(e.target.dataset.inst,e.target);
+  }
+});
+$("instList").addEventListener("click",e=>{
+  if(e.target.closest("label.instCheck"))return; // handled by the change listener above
+  const row=e.target.closest(".instRow");
+  if(row)onSelectInstrumentA(row.dataset.inst);
+});
+
+$("tfSel").onchange=()=>{if(candidateA)loadCandles(candidateA,$("tfSel").value)};
+
+async function fetchCandlesFromOkx(instId,bar){
+  const url="https://www.okx.com/api/v5/market/candles?instId="+encodeURIComponent(instId)+
+            "&bar="+encodeURIComponent(bar)+"&limit=200";
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  if(j.code!=="0")throw new Error("OKX code "+j.code+" "+(j.msg||""));
+  return (j.data||[])
+    .map(x=>({ts:Number(x[0]),o:Number(x[1]),h:Number(x[2]),l:Number(x[3]),c:Number(x[4])}))
+    .sort((a,b)=>a.ts-b.ts);
+}
+
+async function loadCandles(instId,bar){
+  $("previewSub").textContent="Инструмент А (Long): "+instId+" · загрузка свечей…";
+  try{
+    previewCandles=await fetchCandlesFromOkx(instId,bar);
+    drawCandleChart($("candleChart"),previewCandles);
+    $("previewSub").textContent="Инструмент А (Long): "+instId;
+  }catch(err){
+    console.error(err);
+    $("previewSub").textContent="Инструмент А (Long): "+instId+" · ошибка загрузки свечей: "+err.message+
+      ". Возможно, страница открыта не по https-ссылке — см. подсказку выше.";
+  }
+}
+
+let labCandlesA=[],labCandlesB=[];
+
+async function loadLabCandles(){
+  const bar=$("labTfSel").value;
+  try{
+    const [ca,cb]=await Promise.all([fetchCandlesFromOkx(pairState.a,bar),fetchCandlesFromOkx(pairState.b,bar)]);
+    labCandlesA=ca;labCandlesB=cb;
+    drawCandleChart($("candleA"),labCandlesA);
+    drawCandleChart($("candleB"),labCandlesB);
+  }catch(err){
+    console.error(err);
+  }
+}
+$("labTfSel").onchange=loadLabCandles;
+
+function shortTime(ts){
+  const d=new Date(ts);
+  return pad2(d.getDate())+"."+pad2(d.getMonth()+1)+" "+pad2(d.getHours())+":"+pad2(d.getMinutes());
+}
+
+function drawCandleChart(canvas,candles){
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.clientWidth,h=canvas.clientHeight||canvas.height||260;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  const ctx=canvas.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+
+  if(!candles||!candles.length){
+    ctx.fillStyle="#5c666c";ctx.font="12px Inter,Arial";ctx.textAlign="center";
+    ctx.fillText("Нет данных",w/2,h/2);
+    canvas._geo=null;
+    return;
+  }
+
+  let vMin=Math.min(...candles.map(c=>c.l)),vMax=Math.max(...candles.map(c=>c.h));
+  const pad=(vMax-vMin)*0.08||Math.abs(vMax)*0.01||1;
+  vMin-=pad;vMax+=pad;
+
+  const ml=8,mr=58,mt=10,mb=20;
+  const iw=w-ml-mr,ih=h-mt-mb;
+  const n=candles.length;
+  const slot=iw/n;
+  const bodyW=Math.max(1,Math.min(slot*0.6,14));
+
+  const X=i=>ml+i*slot+slot/2;
+  const Y=v=>mt+(1-(v-vMin)/(vMax-vMin))*ih;
+
+  ctx.strokeStyle="#1a2227";ctx.lineWidth=1;
+  ctx.fillStyle="#5c666c";ctx.font="10px Inter,Arial";ctx.textAlign="left";
+  const gridN=4;
+  for(let i=0;i<=gridN;i++){
+    const v=vMin+(vMax-vMin)*i/gridN;
+    const y=Y(v);
+    ctx.beginPath();ctx.moveTo(ml,y+0.5);ctx.lineTo(w-mr,y+0.5);ctx.stroke();
+    ctx.fillText(fmt(v),w-mr+6,y+3);
+  }
+
+  ctx.textAlign="center";
+  const labelEvery=Math.max(1,Math.round(n/6));
+  for(let i=0;i<n;i+=labelEvery){
+    ctx.fillText(shortTime(candles[i].ts),X(i),h-4);
+  }
+
+  candles.forEach((c,i)=>{
+    const x=X(i);
+    const up=c.c>=c.o;
+    ctx.strokeStyle=up?"#35ff68":"#ff6464";
+    ctx.fillStyle=up?"#35ff68":"#ff6464";
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,Y(c.h));ctx.lineTo(x,Y(c.l));ctx.stroke();
+    const yOpen=Y(c.o),yClose=Y(c.c);
+    const top=Math.min(yOpen,yClose),bh=Math.max(1,Math.abs(yClose-yOpen));
+    ctx.fillRect(x-bodyW/2,top,bodyW,bh);
+  });
+
+  const last=candles[candles.length-1];
+  const ly=Y(last.c);
+  ctx.strokeStyle="#7c8ea8";ctx.setLineDash([3,3]);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(ml,ly+0.5);ctx.lineTo(w-mr,ly+0.5);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle="#cfd6da";ctx.textAlign="left";
+  ctx.fillText(fmt(last.c),w-mr+6,ly+3);
+
+  canvas._geo={X,ml,mr,w,n,candles};
+}
+
+function attachCandleCrosshair(canvas,crossEl){
+  canvas.addEventListener("mousemove",e=>{
+    const geo=canvas._geo;
+    if(!geo){crossEl.style.display="none";return}
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left;
+    let idx=Math.floor((mx-geo.ml)/((geo.w-geo.ml-geo.mr)/geo.n));
+    idx=Math.max(0,Math.min(geo.n-1,idx));
+    const c=geo.candles[idx];
+    if(!c){crossEl.style.display="none";return}
+    crossEl.textContent=shortTime(c.ts)+"\nO: "+fmt(c.o)+"\nH: "+fmt(c.h)+"\nL: "+fmt(c.l)+"\nC: "+fmt(c.c);
+    crossEl.style.display="block";
+    crossEl.style.top="8px";
+    let left=mx+10;
+    const tw=crossEl.offsetWidth;
+    if(left+tw>rect.width-4)left=Math.max(4,rect.width-tw-4);
+    crossEl.style.left=left+"px";
+  });
+  canvas.addEventListener("mouseleave",()=>{crossEl.style.display="none"});
+}
+attachCandleCrosshair($("candleChart"),$("candleCross"));
+attachCandleCrosshair($("candleA"),$("candleACross"));
+attachCandleCrosshair($("candleB"),$("candleBCross"));
+
+loadInstrumentList();
+
+// ---------- watchlist ----------
+
+async function fetchTicker(instId){
+  const url="https://www.okx.com/api/v5/market/ticker?instId="+encodeURIComponent(instId);
+  const r=await fetch(url,{cache:"no-store"});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  if(j.code!=="0"||!j.data||!j.data[0])throw new Error("OKX code "+j.code);
+  return Number(j.data[0].last);
+}
+
+function isInWatchlist(){
+  if(state.startMs==null)return false;
+  return getWatchlist().some(w=>w.a===pairState.a&&w.b===pairState.b&&w.startMs===state.startMs);
+}
+function updateWatchlistButton(){
+  const btn=$("addToWatchlistBtn");
+  if(isInWatchlist()){
+    btn.textContent="★ В избранном";
+    btn.classList.add("starActive");
+  }else{
+    btn.textContent="★ В избранное";
+    btn.classList.remove("starActive");
+  }
+}
+
+$("addToWatchlistBtn").onclick=()=>{
+  if(state.startMs==null){alert("Сначала загрузите точку старта.");return}
+  const list=getWatchlist();
+  const idx=list.findIndex(w=>w.a===pairState.a&&w.b===pairState.b&&w.startMs===state.startMs);
+  if(idx>=0){
+    list.splice(idx,1);
+    setWatchlist(list);
+    updateWatchlistButton();
+    return;
+  }
+  if(list.length>=10){
+    alert("В избранном максимум 10 пар. Удалите одну на вкладке Watchlist, чтобы добавить новую.");
+    return;
+  }
+  list.push({a:pairState.a,b:pairState.b,startMs:state.startMs,baseA:state.base.xag,baseB:state.base.cl,addedAt:Date.now()});
+  setWatchlist(list);
+  updateWatchlistButton();
+};
+
+function watchlistRowSkeleton(w,i){
+  return '<div class="wlCard" data-idx="'+i+'">'+
+    '<div class="wlMain">'+
+      '<div class="wlName">'+shortName(w.a)+' / '+shortName(w.b)+'</div>'+
+      '<div class="wlDate">'+formatLocal(w.startMs)+'</div>'+
+    '</div>'+
+    '<div class="wlStats">'+
+      '<b id="wlSpread'+i+'" class="neutral">…</b>'+
+      '<span id="wlGrade'+i+'" class="small">…</span>'+
+    '</div>'+
+    '<div class="wlActions">'+
+      '<button class="wlOpenBtn" data-open="'+i+'" title="Открыть">→</button>'+
+      '<button class="wlRemoveBtn" data-remove="'+i+'" title="Удалить">✕</button>'+
+    '</div>'+
+  '</div>';
+}
+
+async function refreshWatchlistRow(w,i){
+  try{
+    const [tA,tB]=await Promise.all([fetchTicker(w.a),fetchTicker(w.b)]);
+    const pctA=(tA-w.baseA)/w.baseA*100,pctB=(tB-w.baseB)/w.baseB*100;
+    const spread=pctA-pctB;
+    const el=$("wlSpread"+i);
+    if(el){el.textContent=pctFmt(spread);el.className=spread>0?"positive":spread<0?"negative":"neutral"}
+  }catch(err){
+    const el=$("wlSpread"+i);if(el)el.textContent="ошибка";
+  }
+  try{
+    const nowMs=Date.now();
+    const [histA,histB]=await Promise.all([getHourlyCandles(w.a,w.startMs,nowMs),getHourlyCandles(w.b,w.startMs,nowMs)]);
+    const pctHistA=histA.map(c=>({ts:c.ts,pct:(c.close-w.baseA)/w.baseA*100}));
+    const pctHistB=histB.map(c=>({ts:c.ts,pct:(c.close-w.baseB)/w.baseB*100}));
+    const stats=computeWaveStats(pctHistA,pctHistB);
+    const gEl=$("wlGrade"+i);
+    if(gEl)gEl.textContent=stats.waves.length?"Рейтинг "+stats.grade:"—";
+  }catch(err){
+    console.error(err);
+  }
+}
+
+let wlObserver=null;
+const wlLoadedIdx=new Set();
+
+function setupWatchlistObserver(){
+  if(wlObserver)wlObserver.disconnect();
+  wlLoadedIdx.clear();
+  wlObserver=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      const idx=Number(entry.target.dataset.idx);
+      if(entry.isIntersecting){
+        if(!wlLoadedIdx.has(idx)){
+          wlLoadedIdx.add(idx);
+          const w=getWatchlist()[idx];
+          if(w)refreshWatchlistRow(w,idx);
+        }
+      }else{
+        wlLoadedIdx.delete(idx); // re-fetch if it scrolls back into view later
+      }
+    });
+  },{root:null,rootMargin:"0px",threshold:0.3});
+  document.querySelectorAll(".wlCard").forEach(card=>wlObserver.observe(card));
+}
+
+function renderWatchlist(){
+  const list=getWatchlist();
+  const container=$("wlList");
+  if(!list.length){
+    container.innerHTML='<div class="panel"><div class="note">Пока пусто. Откройте пару в Pair Lab, загрузите точку старта и нажмите «★ В избранное».</div></div>';
+    return;
+  }
+  container.innerHTML=list.map((w,i)=>watchlistRowSkeleton(w,i)).join("");
+  setupWatchlistObserver();
+}
+
+$("wlRefresh").onclick=()=>{
+  wlLoadedIdx.clear();
+  const list=getWatchlist();
+  document.querySelectorAll(".wlCard").forEach(card=>{
+    const idx=Number(card.dataset.idx);
+    const w=list[idx];
+    if(w){wlLoadedIdx.add(idx);refreshWatchlistRow(w,idx)}
+  });
+};
+
+$("wlList").addEventListener("click",e=>{
+  const openBtn=e.target.closest("[data-open]");
+  if(openBtn){
+    const idx=Number(openBtn.dataset.open);
+    const w=getWatchlist()[idx];
+    if(w){
+      setPair(w.a,w.b,true);
+      setSelectsFromLocalIso(new Date(w.startMs-new Date().getTimezoneOffset()*60000).toISOString());
+      showPage("lab");
+      loadStartPoint(w.startMs);
+    }
+    return;
+  }
+  const rmBtn=e.target.closest("[data-remove]");
+  if(rmBtn){
+    const idx=Number(rmBtn.dataset.remove);
+    const list=getWatchlist();
+    list.splice(idx,1);
+    setWatchlist(list);
+    renderWatchlist();
+    updateWatchlistButton();
+  }
+});
+
+// ---------- init ----------
+
+$("start").onclick=()=>{
+  const targetMs=getTargetMsFromSelects();
+  if(!Number.isFinite(targetMs)){alert("Неверная дата/время.");return}
+  loadStartPoint(targetMs);
+};
+
+$("spreadChart").addEventListener("wheel",onWheel,{passive:false});
+
+// ---------- crosshair for the spread chart ----------
+
+function hideSyncCrosshair(){
+  $("spreadVLine").style.display="none";
+  $("spreadCross").style.display="none";
+}
+
+function showSyncCrosshairAt(t,mx){
+  if(!settings.crosshair){hideSyncCrosshair();return}
+  const c=$("spreadChart"),geo=c._geo,vline=$("spreadVLine");
+  if(!geo){vline.style.display="none";return}
+  const x=geo.X(t);
+  vline.style.left=x+"px";
+  vline.style.display="block";
+
+  const xagP=nearestPoint(state.hist.xag,t);
+  const clP=nearestPoint(state.hist.cl,t);
+  let label=formatLocal(t);
+  if(xagP)label+="\n"+shortName(pairState.a)+": "+pctFmt(xagP.v!=null?xagP.v:xagP.pct);
+  if(clP)label+="\n"+shortName(pairState.b)+": "+pctFmt(clP.v!=null?clP.v:clP.pct);
+  if(xagP&&clP){
+    const xv=xagP.v!=null?xagP.v:xagP.pct, cv=clP.v!=null?clP.v:clP.pct;
+    label+="\nSpread: "+pctFmt(xv-cv);
+  }
+
+  const activeEl=$("spreadCross"),rect=c.getBoundingClientRect();
+  activeEl.textContent=label;
+  activeEl.style.display="block";
+  activeEl.style.left="0px";
+  const tw=activeEl.offsetWidth;
+  let left=mx+10;
+  if(left+tw>rect.width-4)left=Math.max(4,rect.width-tw-4);
+  activeEl.style.left=left+"px";
+  activeEl.style.top="8px";
+}
+
+function attachSyncCrosshair(canvas){
+  canvas.addEventListener("mousemove",e=>{
+    const geo=canvas._geo;
+    if(!geo){hideSyncCrosshair();return}
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left;
+    const t=geo.tMin+((mx-geo.ml)/(geo.w-geo.ml-geo.mr))*(geo.tMax-geo.tMin);
+    if(!isFinite(t)){hideSyncCrosshair();return}
+    showSyncCrosshairAt(t,mx);
+  });
+  canvas.addEventListener("mouseleave",hideSyncCrosshair);
+}
+attachSyncCrosshair($("spreadChart"));
+
+// ---------- display settings wiring ----------
+
+$("optCrosshair").onchange=e=>{settings.crosshair=e.target.checked;if(!settings.crosshair)hideSyncCrosshair()};
+$("optPoints").onchange=e=>{settings.points=e.target.checked;renderCharts()};
+$("optWaves").onchange=e=>{settings.waves=e.target.checked;renderCharts()};
+$("optLineWidth").oninput=e=>{
+  settings.lineWidth=Number(e.target.value);
+  $("lineWidthVal").textContent=settings.lineWidth;
+  renderCharts();
+};
+document.querySelectorAll(".tmMini").forEach(btn=>{
+  btn.onclick=()=>shiftStart(Number(btn.dataset.shift));
+});
+
+function updateFsLabels(){
+  const startTxt=state.startMs!=null?formatLocal(state.startMs):"—";
+  const nowTxt=formatLocal(Date.now());
+  const txt="Старт: "+startTxt+" · Сейчас: "+nowTxt;
+  $("perfFsLabel").textContent=txt;
+  $("spreadFsLabel").textContent=txt;
+}
+setInterval(updateFsLabels,1000);
+updateFsLabels();
+
+function toggleFullscreen(panelId,btnId){
+  const panel=$(panelId),btn=$(btnId);
+  const isFull=panel.classList.toggle("fullscreenChart");
+  document.body.classList.toggle("noScroll",isFull);
+  btn.textContent=isFull?"✕":"⛶";
+  btn.title=isFull?"Свернуть":"На весь экран";
+  const fsLabelId=panelId==="perfPanel"?"perfFsLabel":"spreadFsLabel";
+  $(fsLabelId).style.display=isFull?"block":"none";
+  // give the browser a frame to apply the new layout size before redrawing
+  requestAnimationFrame(()=>requestAnimationFrame(renderLabCharts));
+}
+$("perfExpand").onclick=()=>toggleFullscreen("perfPanel","perfExpand");
+$("spreadExpand").onclick=()=>toggleFullscreen("spreadPanel","spreadExpand");
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){
+    ["perfPanel","spreadPanel"].forEach((id,i)=>{
+      const panel=$(id);
+      if(panel.classList.contains("fullscreenChart")){
+        toggleFullscreen(id,i===0?"perfExpand":"spreadExpand");
+      }
+    });
+  }
+});
+
+window.addEventListener("resize",()=>{
+  renderLabCharts();
+  if(candidateA&&previewCandles.length)drawCandleChart($("candleChart"),previewCandles);
+});
+
+const savedSession=loadSession();
+if(savedSession&&savedSession.a&&savedSession.b){
+  pairState.a=savedSession.a;
+  pairState.b=savedSession.b;
+}
+applyPairLabels();
+const now=new Date();
+const local=new Date(now.getTime()-now.getTimezoneOffset()*60000);
+populateDateTimeSelects();
+if(savedSession&&savedSession.startMs){
+  setSelectsFromLocalIso(new Date(savedSession.startMs-now.getTimezoneOffset()*60000).toISOString());
+}else{
+  setSelectsFromLocalIso(local.toISOString());
+}
+
+connect();
+loadLabCandles();
+if(savedSession&&savedSession.startMs&&savedSession.startMs<=Date.now()){
+  loadStartPoint(savedSession.startMs);
+}
+</script>
+</body>
+</html>
