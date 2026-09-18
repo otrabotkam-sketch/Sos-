@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Claude Code Control</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    padding: 16px;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+  }
+  h2 { font-size: 18px; font-weight: 500; }
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: 10px;
+    font-size: 16px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    font-size: 16px;
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    border-radius: 8px;
+  }
+  #status { margin-top: 12px; font-size: 14px; color: #888; }
+</style>
+</head>
+<body>
+  <h2>Задача для Claude</h2>
+  <textarea id="task" placeholder="Например: добавь функцию сортировки в utils.py"></textarea>
+  <button id="send">Отправить</button>
+  <div id="status"></div>
+
+<script>
+  // Замените на адрес вашего Cloudflare Worker после деплоя
+  const RELAY_URL = "https://ВАШ-WORKER.workers.dev";
+
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  document.getElementById("send").addEventListener("click", async () => {
+    const taskEl = document.getElementById("task");
+    const statusEl = document.getElementById("status");
+    const task = taskEl.value.trim();
+
+    if (!task) {
+      statusEl.textContent = "Введите задачу";
+      return;
+    }
+
+    statusEl.textContent = "Отправляю...";
+    try {
+      const res = await fetch(RELAY_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, initData: tg.initData }),
+      });
+
+      if (res.ok) {
+        statusEl.textContent = "Задача отправлена, Claude работает над ней";
+        taskEl.value = "";
+      } else {
+        statusEl.textContent = "Ошибка: " + (await res.text());
+      }
+    } catch (e) {
+      statusEl.textContent = "Ошибка сети: " + e.message;
+    }
+  });
+</script>
+</body>
+</html>
